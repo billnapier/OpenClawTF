@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+
+# Mount Persistent Disk
+DEVICE_ID="/dev/disk/by-id/google-openclaw-data"
+MOUNT_DIR="/mnt/disks/openclaw-data"
+
+if [ -b "$DEVICE_ID" ]; then
+  mkdir -p "$MOUNT_DIR"
+  if ! blkid "$DEVICE_ID" | grep -q "ext4"; then
+    echo "Formatting $DEVICE_ID as ext4..."
+    mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0 "$DEVICE_ID"
+  fi
+  if ! mountpoint -q "$MOUNT_DIR"; then
+    echo "Mounting $DEVICE_ID to $MOUNT_DIR..."
+    mount -o discard,defaults "$DEVICE_ID" "$MOUNT_DIR"
+    chmod a+w "$MOUNT_DIR"
+  fi
+fi
+
+# Configure Container Runtime
+echo "Pulling and launching container: ${container_image}"
+docker pull "${container_image}" || true
