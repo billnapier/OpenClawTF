@@ -1,6 +1,6 @@
-# Architecture Proposal: OpenClaw / NanoGemClaw on GCP with Terraform & Gemini
+# Architecture Proposal: OpenClaw on GCP with Terraform & Gemini
 
-This document presents the high-level proposal for deploying **OpenClaw** (or **NanoGemClaw**) on Google Cloud Platform (GCP) Compute Engine (GCE), integrated with the **Google Gemini API** and **Telegram**, managed via **Terraform** and **`abcxyz/guardian`**.
+This document presents the high-level proposal for deploying **OpenClaw** on Google Cloud Platform (GCP) Compute Engine (GCE), integrated with the **Google Gemini API** and **Telegram**, managed via **Terraform** and **`abcxyz/guardian`**.
 
 ---
 

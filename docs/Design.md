@@ -1,6 +1,6 @@
-# Technical Architecture & System Design: OpenClaw / NanoGemClaw on GCP
+# Technical Architecture & System Design: OpenClaw on GCP
 
-This document details the system architecture, key architectural decisions, and modular repository structure for running **OpenClaw** (or **NanoGemClaw**) on Google Cloud Platform (GCP) Compute Engine (GCE), integrated with **Google Gemini API** and **Telegram**.
+This document details the system architecture, key architectural decisions, and modular repository structure for running **OpenClaw** on Google Cloud Platform (GCP) Compute Engine (GCE), integrated with **Google Gemini API** and **Telegram**.
 
 ---
 
@@ -33,7 +33,7 @@ flowchart TD
             
             subgraph Compute ["Compute Engine"]
                 VM["GCE Instance (e2-standard-2 / Container-Optimized OS)"]
-                Container["OpenClaw / NanoGemClaw Container"]
+                Container["OpenClaw Container"]
             end
 
             PD[("Detached GCP Persistent Disk\n(/mnt/disks/openclaw-data)")]
@@ -106,7 +106,7 @@ flowchart TD
 │       ├── storage/               # Standalone GCP Persistent Disk for agent data
 │       └── compute/               # GCE VM instance, metadata startup-script template
 ├── docker/
-│   ├── Dockerfile                 # OpenClaw / NanoGemClaw container definition
+│   ├── Dockerfile                 # OpenClaw container definition
 │   └── startup-script.sh          # VM bootstrap: disk mount, secret fetching, Docker run
 └── README.md
 ```

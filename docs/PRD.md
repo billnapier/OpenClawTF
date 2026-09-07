@@ -1,6 +1,6 @@
-# Product Requirements Document (PRD): OpenClaw / NanoGemClaw on GCP
+# Product Requirements Document (PRD): OpenClaw on GCP
 
-This document defines the product vision, user personas, Critical User Journeys (CUJs), access control experience, and error-handling requirements for **OpenClaw / NanoGemClaw**.
+This document defines the product vision, user personas, Critical User Journeys (CUJs), access control experience, and error-handling requirements for **OpenClaw**.
 
 ---
 

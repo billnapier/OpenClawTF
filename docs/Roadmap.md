@@ -1,6 +1,6 @@
-# Deployment Implementation Roadmap: OpenClaw / NanoGemClaw on GCP
+# Deployment Implementation Roadmap: OpenClaw on GCP
 
-This document tracks the milestones, phases, and execution schedule for provisioning and deploying **OpenClaw** (or **NanoGemClaw**) on Google Cloud Platform (GCP) using Terraform and `abcxyz/guardian`.
+This document tracks the milestones, phases, and execution schedule for provisioning and deploying **OpenClaw** on Google Cloud Platform (GCP) using Terraform and `abcxyz/guardian`.
 
 ---
 
@@ -40,7 +40,7 @@ gantt
 * `modules/compute`: `google_compute_instance` with COS base image and metadata startup script for idempotent disk mount.
 
 ### Phase 3: Containerization & Startup Logic
-* `docker/Dockerfile`: OpenClaw / NanoGemClaw application image with SIGTERM graceful shutdown and startup backoff retries.
+* `docker/Dockerfile`: OpenClaw application image with SIGTERM graceful shutdown and startup backoff retries.
 * `docker/entrypoint.sh`: Container entrypoint fetching secrets from GCP Secret Manager API using ADC (`roles/secretmanager.secretAccessor`).
 * `docker/startup-script.sh`: VM bootstrap: inspect filesystem via `blkid`, format with `mkfs.ext4` if unformatted, mount `/dev/disk/by-id/google-openclaw-data` to `/mnt/disks/openclaw-data`.
 
