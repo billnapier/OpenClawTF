@@ -294,9 +294,13 @@ class ControlGatewayHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"404 Not Found")
 
+    def address_string(self):
+        return self.client_address[0]
+
     def log_message(self, format, *args):
         # Quiet standard logging to stderr
         sys.stderr.write(f"[CONTROL GATEWAY] {self.address_string()} - {format%args}\n")
+
 
 def run_server():
     server_address = ("0.0.0.0", PORT)
