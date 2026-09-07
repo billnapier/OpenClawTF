@@ -9,20 +9,24 @@ This runbook provides step-by-step operational procedures for managing the OpenC
 
 All runtime credentials (`GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`) are stored securely in GCP Secret Manager.
 
-### Rotated Secret Update
-To rotate a secret (e.g., `openclaw-gemini-api-key`):
+### Automated Secret Rotation Utility
+Use the automated secret rotation and verification utility to rotate credentials and verify container health post-rotation:
 
 ```bash
-# 1. Add new version to Secret Manager
-echo -n "NEW_SECRET_VALUE" | gcloud secrets versions add openclaw-gemini-api-key \
-  --project="$GCP_PROJECT_ID" \
-  --data-file=-
+# Rotate Gemini API key and execute automated post-rotation verification
+./scripts/rotate_and_verify_secrets.sh \
+  --secret=openclaw-gemini-api-key \
+  --value="NEW_GEMINI_API_KEY_PAYLOAD"
 
-# 2. Restart container on GCE instance to fetch updated secret
-gcloud compute instances reset openclaw-instance \
-  --zone="$GCP_ZONE" \
-  --project="$GCP_PROJECT_ID"
+# Rotate Telegram Bot Token
+./scripts/rotate_and_verify_secrets.sh \
+  --secret=openclaw-telegram-bot-token \
+  --value="NEW_TELEGRAM_BOT_TOKEN_PAYLOAD"
+
+# Run post-rotation health & database verification only
+./scripts/rotate_and_verify_secrets.sh --verify-only
 ```
+
 
 ---
 
