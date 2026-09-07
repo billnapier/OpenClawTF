@@ -36,12 +36,16 @@ jobs:
           terraform_version: "1.5.0"
 
       - name: Setup Guardian
-        uses: abcxyz/guardian-setup@v0
+        uses: abcxyz/actions/.github/actions/setup-binary@main
         with:
-          version: "latest"
+          download_url: "https://github.com/abcxyz/guardian/releases/download/v3.2.5/guardian_3.2.5_linux_amd64.tar.gz"
+          install_path: "${{ runner.temp }}/guardian"
+          binary_subpath: "guardian"
+          add_to_path: "true"
+          cache_key: "guardian-v3.2.5"
 
       - name: Guardian Terraform Plan
         run: |
-          guardian terraform plan \
+          guardian plan \
             -dir=terraform \
-            -storage-bucket=${{ vars.GCP_TF_STATE_BUCKET }}
+            -storage=gcs://${{ vars.GCP_TF_STATE_BUCKET }}
