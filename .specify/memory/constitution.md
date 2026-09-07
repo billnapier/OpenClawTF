@@ -1,12 +1,8 @@
 <!-- SYNC IMPACT REPORT
-Version change: Initial → v1.0.0
-Modified principles: None (Initial Creation)
+Version change: v1.0.0 → v1.1.0
+Modified principles: None
 Added sections:
-  - Principle 1: Infrastructure as Code (Terraform)
-  - Principle 2: GitOps Actuation via Guardian
-  - Principle 3: Keyless Auth & Least Privilege Secrets
-  - Principle 4: Decoupled State & Data Persistence
-  - Principle 5: Containerized Artifact Supply Chain
+  - Principle 6: Explicit Version Pinning & LLM Verification
 Removed sections: None
 Templates requiring updates:
   - .specify/templates/plan-template.md (✅ updated / aligned)
@@ -17,7 +13,7 @@ Follow-up TODOs: None
 
 # OpenClawTF Project Constitution
 
-**Version**: v1.0.0  
+**Version**: v1.1.0  
 **Ratification Date**: 2026-09-06  
 **Last Amended Date**: 2026-09-06  
 
@@ -65,6 +61,14 @@ Application state, SQLite database files, conversation memory, and persistent lo
 Application runtimes MUST be packaged as immutable Docker container images built via GitHub Actions and published to GCP Artifact Registry. Deployments MUST pull tagged or SHA-pinned container images rather than building software directly on target VM hosts.
 
 *Rationale: Ensures consistent container runtimes and eliminates host-level dependency drift.*
+
+### Principle 6: Explicit Version Pinning & LLM Verification
+
+All software dependencies—including Terraform provider versions, Terraform module sources, GitHub Actions (`uses: action@vX.Y.Z`), Docker base images, and package ecosystem libraries—MUST specify explicit, real, pinned version numbers. Unpinned or floating version specifiers (such as `@latest`, `@main`, `^x.y.z`, or `~> x.y`) are strictly prohibited in production configurations.
+
+Furthermore, the AI coding assistant / LLM MUST actively verify that all referenced version strings exist in public registries or release APIs before committing configuration code.
+
+*Rationale: Prevents supply chain vulnerability exposure, silent breaking changes, and non-deterministic deployment build failures.*
 
 ---
 
