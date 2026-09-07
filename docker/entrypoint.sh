@@ -3,6 +3,8 @@ set -eo pipefail
 
 echo "[ENTRYPOINT] Initializing OpenClaw Runtime Environment..."
 
+PROJECT_ID="${GCP_PROJECT_ID:-$(curl -s -H 'Metadata-Flavor: Google' 'http://metadata.google.internal/computeMetadata/v1/project/project-id' 2>/dev/null || echo "")}"
+
 # Helper to fetch secret from GCP Secret Manager via gcloud / ADC
 fetch_secret() {
   local secret_name="$1"
@@ -11,8 +13,13 @@ fetch_secret() {
   local backoff=2
   local value=""
 
+  local project_args=()
+  if [ -n "$PROJECT_ID" ]; then
+    project_args=(--project="$PROJECT_ID")
+  fi
+
   while [ $count -lt $max_retries ]; do
-    if value=$(gcloud secrets versions access latest --secret="$secret_name" 2>/dev/null); then
+    if value=$(gcloud secrets versions access latest --secret="$secret_name" "${project_args[@]}" 2>/dev/null); then
       echo "$value"
       return 0
     fi
@@ -28,17 +35,17 @@ fetch_secret() {
 
 # Fetch required secrets if not already populated in environment
 if [ -z "$GEMINI_API_KEY" ]; then
-  GEMINI_API_KEY=$(fetch_secret "openclaw-gemini-api-key" || true)
+  GEMINI_API_KEY=$(fetch_secret "gemini-api-key" || fetch_secret "openclaw-gemini-api-key" || true)
   export GEMINI_API_KEY
 fi
 
 if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
-  TELEGRAM_BOT_TOKEN=$(fetch_secret "openclaw-telegram-bot-token" || true)
+  TELEGRAM_BOT_TOKEN=$(fetch_secret "telegram-bot-token" || fetch_secret "openclaw-telegram-bot-token" || true)
   export TELEGRAM_BOT_TOKEN
 fi
 
 if [ -z "$TELEGRAM_ALLOWED_USER_IDS" ]; then
-  TELEGRAM_ALLOWED_USER_IDS=$(fetch_secret "openclaw-telegram-allowed-user-ids" || true)
+  TELEGRAM_ALLOWED_USER_IDS=$(fetch_secret "telegram-allowed-user-ids" || fetch_secret "openclaw-telegram-allowed-user-ids" || true)
   export TELEGRAM_ALLOWED_USER_IDS
 fi
 
@@ -60,15 +67,21 @@ cleanup() {
 
 trap cleanup SIGTERM SIGINT
 
-echo "[ENTRYPOINT] Starting OpenClaw Service..."
+echo "[ENTRYPOINT] Starting OpenClaw Services..."
 
 # Execute main application process (or command passed to docker container)
 if [ "$#" -gt 0 ]; then
   "$@" &
   APP_PID=$!
 else
-  echo "[ENTRYPOINT] Running default openclaw startup command..." &
+  echo "[ENTRYPOINT] Launching OpenClaw Control UI Web Gateway..."
+  python3 /app/scripts/control_gateway.py &
+  CONTROL_PID=$!
+
+  echo "[ENTRYPOINT] Launching OpenClaw Telegram Bot Daemon..."
+  python3 /app/scripts/telegram_daemon.py &
   APP_PID=$!
 fi
 
 wait "$APP_PID"
+

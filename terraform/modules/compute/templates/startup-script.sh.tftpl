@@ -20,4 +20,19 @@ fi
 
 # Configure Container Runtime
 echo "Pulling and launching container: ${container_image}"
-docker pull "${container_image}" || true
+REGISTRY_DOMAIN="$(echo "${container_image}" | cut -d'/' -f1)"
+HOME=/tmp docker-credential-gcr configure-docker --registries="$REGISTRY_DOMAIN" || true
+
+HOME=/tmp docker pull "${container_image}"
+
+docker stop openclaw-container || true
+docker rm openclaw-container || true
+
+docker run -d \
+  --name openclaw-container \
+  --restart always \
+  -p 18789:18789 \
+  -v /mnt/disks/openclaw-data:/mnt/disks/openclaw-data \
+  "${container_image}"
+
+

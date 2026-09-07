@@ -33,3 +33,17 @@ resource "google_compute_router_nat" "nat" {
     filter = "ERRORS_ONLY"
   }
 }
+
+resource "google_compute_firewall" "allow_iap_ssh" {
+  name    = "${var.network_name}-allow-iap-ssh"
+  project = var.project_id
+  network = google_compute_network.vpc.id
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = ["35.235.240.0/20"]
+}
+
