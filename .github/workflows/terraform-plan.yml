@@ -1,0 +1,47 @@
+name: "Guardian Terraform Plan"
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+      - "docker/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  plan:
+    name: "Terraform Plan"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud via WIF
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Setup Guardian
+        uses: abcxyz/guardian-setup@v0
+        with:
+          version: "latest"
+
+      - name: Guardian Terraform Plan
+        run: |
+          guardian terraform plan \
+            -dir=terraform \
+            -storage-bucket=${{ vars.GCP_TF_STATE_BUCKET }}
