@@ -57,7 +57,8 @@ jobs:
         run: |
           guardian apply \
             -dir=terraform \
-            -storage=gcs://${{ vars.GCP_TF_STATE_BUCKET }}
+            -storage=gcs://${{ vars.GCP_TF_STATE_BUCKET }} \
+            -allow-lockfile-changes
         env:
           GUARDIAN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
