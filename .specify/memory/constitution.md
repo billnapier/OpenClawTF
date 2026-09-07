@@ -1,19 +1,18 @@
 <!-- SYNC IMPACT REPORT
-Version change: v1.0.0 → v1.1.0
+Version change: v1.1.0 → v1.2.0
 Modified principles: None
 Added sections:
-  - Principle 6: Explicit Version Pinning & LLM Verification
+  - Principle 7: Synchronized Manual Setup Documentation & Interactive Onboarding Skill
 Removed sections: None
 Templates requiring updates:
-  - .specify/templates/plan-template.md (✅ updated / aligned)
-  - .specify/templates/spec-template.md (✅ updated / aligned)
-  - .specify/templates/tasks-template.md (✅ updated / aligned)
+  - docs/Quickstart.md (✅ updated / aligned)
+  - /home/napier/.gemini/antigravity/skills/nanogemclaw.bootstrap/SKILL.md (✅ updated / aligned)
 Follow-up TODOs: None
 -->
 
 # OpenClawTF Project Constitution
 
-**Version**: v1.1.0  
+**Version**: v1.2.0  
 **Ratification Date**: 2026-09-06  
 **Last Amended Date**: 2026-09-06  
 
@@ -70,6 +69,14 @@ Furthermore, the AI coding assistant / LLM MUST actively verify that all referen
 
 *Rationale: Prevents supply chain vulnerability exposure, silent breaking changes, and non-deterministic deployment build failures.*
 
+### Principle 7: Synchronized Manual Setup Documentation & Interactive Onboarding Skill
+
+All required manual configuration and GCP setup prerequisites MUST be documented in human-readable Markdown format in `docs/Quickstart.md` (and related module quickstarts). Furthermore, a dedicated executable onboarding skill (e.g., `nanogemclaw.bootstrap` / QuickStart skill) MUST be provided to allow users to interactively perform or verify the setup with Antigravity.
+
+The onboarding skill MUST assume sensible defaults for all input parameters, explicitly prompt the user to review and confirm or change those parameters prior to execution, and maintain strict functional parity with `docs/Quickstart.md` at all times. Whenever manual setup procedures change, `docs/Quickstart.md` and the onboarding skill MUST be updated simultaneously.
+
+*Rationale: Ensures seamless developer onboarding, eliminates documentation drift, and reduces setup friction for cloud infrastructure deployment.*
+
 ---
 
 ## Governance & Amendment Policy
@@ -78,6 +85,6 @@ Furthermore, the AI coding assistant / LLM MUST actively verify that all referen
 2. **Amendment Process**: Amendments to this Constitution require a Pull Request detailing the proposed change, rationale, and a Sync Impact Report updating all affected templates and documentation.
 3. **Versioning Policy**:
    * **MAJOR** (e.g., v1.0.0 → v2.0.0): Incompatible principle removals or foundational architecture redefinitions.
-   * **MINOR** (e.g., v1.0.0 → v1.1.0): New principles, expanded compliance checks, or structural additions.
+   * **MINOR** (e.g., v1.0.0 → v1.2.0): New principles, expanded compliance checks, or structural additions.
    * **PATCH** (e.g., v1.0.0 → v1.0.1): Clarifications, wording refinements, or typo fixes.
 4. **Compliance Enforcement**: All Pull Requests MUST be validated against this Constitution prior to merging into `main`.

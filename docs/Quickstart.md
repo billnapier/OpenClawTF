@@ -2,6 +2,9 @@
 
 This document outlines all manual prerequisites, initial environment setup steps, secret configurations, and GitOps CI/CD onboarding required before deploying OpenClaw using Terraform on Google Cloud Platform.
 
+> 💡 **Interactive QuickStart Option**:  
+> Per Constitution **Principle 7**, you can execute this setup interactively using the **Antigravity Onboarding Skill** (`@[nanogemclaw.bootstrap]`). The skill detects reasonable defaults for your project, allows you to confirm or change inputs in bulk, and executes these steps automatically.
+
 ---
 
 ## 1. Local Prerequisites & GCP Authentication
