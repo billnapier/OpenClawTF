@@ -88,6 +88,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       text-decoration: none;
       border-radius: 8px;
       font-weight: 500;
+      cursor: pointer;
       transition: all 0.2s ease;
     }
     .nav-item.active a, .nav-item a:hover {
@@ -132,6 +133,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       padding: 2rem;
       max-width: 1200px;
     }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -174,6 +181,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       border-radius: 12px;
       overflow: hidden;
       border: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
     }
     th, td {
       padding: 1rem 1.25rem;
@@ -190,6 +198,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     td {
       font-size: 0.95rem;
     }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      background-color: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background-color: var(--accent-hover);
+    }
   </style>
 </head>
 <body>
@@ -199,69 +223,223 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <span>OpenClaw</span>
     </div>
     <ul class="nav-menu">
-      <li class="nav-item active"><a href="#">📊 Overview</a></li>
-      <li class="nav-item"><a href="#">⚙️ Configuration</a></li>
-      <li class="nav-item"><a href="#">💬 Channels</a></li>
-      <li class="nav-item"><a href="#">🧠 Models</a></li>
-      <li class="nav-item"><a href="#">🔒 Whitelist</a></li>
+      <li class="nav-item active" data-tab="tab-overview"><a onclick="switchTab('tab-overview')">📊 Overview</a></li>
+      <li class="nav-item" data-tab="tab-config"><a onclick="switchTab('tab-config')">⚙️ Configuration</a></li>
+      <li class="nav-item" data-tab="tab-channels"><a onclick="switchTab('tab-channels')">💬 Channels</a></li>
+      <li class="nav-item" data-tab="tab-models"><a onclick="switchTab('tab-models')">🧠 Models</a></li>
+      <li class="nav-item" data-tab="tab-whitelist"><a onclick="switchTab('tab-whitelist')">🔒 Whitelist</a></li>
     </ul>
   </div>
   <div id="main-content">
     <header>
-      <h2>Control UI & Gateway Dashboard</h2>
+      <h2 id="header-title">Control UI & Gateway Dashboard</h2>
       <div class="status-badge">
         <span class="status-dot"></span>
         Gateway Active
       </div>
     </header>
     <div class="container">
-      <div class="grid">
-        <div class="card">
-          <div class="card-title">LLM Model Engine</div>
-          <div class="card-value">Gemini 2.5 Flash</div>
-          <div class="card-subtitle">Default Model Router</div>
+
+      <!-- TAB 1: OVERVIEW -->
+      <div id="tab-overview" class="tab-content active">
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">LLM Model Engine</div>
+            <div class="card-value">Gemini 2.5 Flash</div>
+            <div class="card-subtitle">Default Model Router</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Active Transport</div>
+            <div class="card-value">Telegram Bot</div>
+            <div class="card-subtitle">Long-Polling Gateway</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Storage Persistence</div>
+            <div class="card-value">/mnt/disks/...</div>
+            <div class="card-subtitle">Detached GCP Persistent Disk</div>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-title">Active Transport</div>
-          <div class="card-value">Telegram Bot</div>
-          <div class="card-subtitle">Long-Polling Gateway</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Storage Persistence</div>
-          <div class="card-value">/mnt/disks/...</div>
-          <div class="card-subtitle">Detached GCP Persistent Disk</div>
-        </div>
+
+        <h3 class="section-title">System Runtime Status</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Status</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Control UI Web Server</td>
+              <td><span style="color: var(--success); font-weight:600;">RUNNING</span></td>
+              <td>Port 18789 (Local IAP Tunnel)</td>
+            </tr>
+            <tr>
+              <td>Telegram Channel Adapter</td>
+              <td><span style="color: var(--success); font-weight:600;">ACTIVE</span></td>
+              <td>Outbound Polling Active</td>
+            </tr>
+            <tr>
+              <td>Vector Memory Engine</td>
+              <td><span style="color: var(--success); font-weight:600;">READY</span></td>
+              <td>SQLite Persistent DB Mount</td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="btn" onclick="fetchStatus()">🔄 Refresh System Health</button>
       </div>
 
-      <h3 class="section-title">System Runtime Status</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Component</th>
-            <th>Status</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Control UI Web Server</td>
-            <td><span style="color: var(--success); font-weight:600;">RUNNING</span></td>
-            <td>Port 18789 (Local IAP Tunnel)</td>
-          </tr>
-          <tr>
-            <td>Telegram Channel Adapter</td>
-            <td><span style="color: var(--success); font-weight:600;">ACTIVE</span></td>
-            <td>Outbound Polling Active</td>
-          </tr>
-          <tr>
-            <td>Vector Memory Engine</td>
-            <td><span style="color: var(--success); font-weight:600;">READY</span></td>
-            <td>SQLite Persistent DB Mount</td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- TAB 2: CONFIGURATION -->
+      <div id="tab-config" class="tab-content">
+        <h3 class="section-title">Gateway Configuration</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Configured Value</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Control Port</td>
+              <td>18789</td>
+              <td>OPENCLAW_CONTROL_PORT</td>
+            </tr>
+            <tr>
+              <td>GCP Project ID</td>
+              <td>openclaw-tf-90326</td>
+              <td>Environment Metadata</td>
+            </tr>
+            <tr>
+              <td>Persistent Mount</td>
+              <td>/mnt/disks/openclaw-data</td>
+              <td>GCP Persistent Disk</td>
+            </tr>
+            <tr>
+              <td>Gemini API Credential</td>
+              <td><span style="color: var(--success); font-weight:600;">Configured</span></td>
+              <td>GCP Secret Manager</td>
+            </tr>
+            <tr>
+              <td>Telegram Bot Token</td>
+              <td><span style="color: var(--success); font-weight:600;">Configured</span></td>
+              <td>GCP Secret Manager</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB 3: CHANNELS -->
+      <div id="tab-channels" class="tab-content">
+        <h3 class="section-title">Active Transport Channels</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Channel</th>
+              <th>Protocol</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Telegram Bot Gateway</td>
+              <td>HTTPS Outbound Long-Polling</td>
+              <td><span style="color: var(--success); font-weight:600;">ACTIVE</span></td>
+            </tr>
+            <tr>
+              <td>Discord Adapter</td>
+              <td>WebSocket Egress</td>
+              <td><span style="color: var(--text-muted);">STANDBY</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB 4: MODELS -->
+      <div id="tab-models" class="tab-content">
+        <h3 class="section-title">Configured LLM Model Engines</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Model Identifier</th>
+              <th>Provider</th>
+              <th>Capabilities</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>gemini-2.5-flash</strong></td>
+              <td>Google Gemini API</td>
+              <td>Fast Reasoning, Multimodal, Vector Memory</td>
+              <td><span style="color: var(--success); font-weight:600;">DEFAULT</span></td>
+            </tr>
+            <tr>
+              <td><strong>gemini-2.5-pro</strong></td>
+              <td>Google Gemini API</td>
+              <td>High Intelligence, Deep Analysis</td>
+              <td><span style="color: var(--success); font-weight:600;">AVAILABLE</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB 5: WHITELIST -->
+      <div id="tab-whitelist" class="tab-content">
+        <h3 class="section-title">Access Control Whitelist</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">Authorized Telegram User IDs with system access:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Role</th>
+              <th>Authorization Status</th>
+            </tr>
+          </thead>
+          <tbody id="whitelist-table-body">
+            <tr>
+              <td>7797117562</td>
+              <td>Administrator</td>
+              <td><span style="color: var(--success); font-weight:600;">AUTHORIZED</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
     </div>
   </div>
+
+  <script>
+    function switchTab(tabId) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+      // Show selected tab
+      const targetTab = document.getElementById(tabId);
+      if (targetTab) {
+        targetTab.classList.add('active');
+      }
+
+      // Highlight active nav item
+      const navItem = document.querySelector('.nav-item[data-tab="' + tabId + '"]');
+      if (navItem) {
+        navItem.classList.add('active');
+      }
+    }
+
+    async function fetchStatus() {
+      try {
+        const resp = await fetch('/api/status');
+        const data = await resp.json();
+        alert('Gateway Status: ' + data.status + '\\nComponents: ' + JSON.stringify(data.components, null, 2));
+      } catch (e) {
+        alert('Error fetching status: ' + e);
+      }
+    }
+  </script>
 </body>
 </html>
 """
@@ -276,7 +454,7 @@ class ControlGatewayHandler(BaseHTTPRequestHandler):
             self.wfile.write(HTML_TEMPLATE.encode("utf-8"))
         elif parsed.path in ["/api/status", "/api/health"]:
             self.send_response(200)
-            self.send_header("Content-Type", "json/application")
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
             data = {
                 "status": "healthy",
@@ -298,9 +476,7 @@ class ControlGatewayHandler(BaseHTTPRequestHandler):
         return self.client_address[0]
 
     def log_message(self, format, *args):
-        # Quiet standard logging to stderr
         sys.stderr.write(f"[CONTROL GATEWAY] {self.address_string()} - {format%args}\n")
-
 
 def run_server():
     server_address = ("0.0.0.0", PORT)
