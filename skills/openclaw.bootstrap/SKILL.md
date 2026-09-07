@@ -1,5 +1,5 @@
 ---
-name: nanogemclaw.bootstrap
+name: openclaw.bootstrap
 description: Automated end-to-end setup of GCP infrastructure, Workload Identity Federation (WIF), GCP secrets, and GitHub repo secrets/variables for OpenClaw.
 version: 1.0.0
 ---
