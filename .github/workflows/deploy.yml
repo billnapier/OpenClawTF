@@ -46,13 +46,6 @@ jobs:
       - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Pre-Flight Secret Verification Gate
-        run: |
-          chmod +x scripts/verify_secret_versions.sh
-          ./scripts/verify_secret_versions.sh
-        env:
-          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-
       - name: Guardian Terraform Apply
         run: |
           guardian apply \
@@ -65,6 +58,23 @@ jobs:
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_zone: ${{ vars.GCP_ZONE }}
           TF_VAR_service_account_email: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Seed Secret Payloads
+        run: |
+          chmod +x scripts/seed_secrets.sh
+          ./scripts/seed_secrets.sh
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ALLOWED_USER_IDS: ${{ secrets.ALLOWED_USER_IDS }}
+
+      - name: Pre-Flight Secret Verification Gate
+        run: |
+          chmod +x scripts/verify_secret_versions.sh
+          ./scripts/verify_secret_versions.sh
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
 
       - name: Configure Docker for Artifact Registry
         run: |
