@@ -1,0 +1,86 @@
+name: "Guardian Terraform Deploy & Container Sync"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/**"
+      - "docker/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: "Terraform Apply & Container Push"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud via WIF
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Setup Guardian
+        uses: abcxyz/guardian-setup@v0
+        with:
+          version: "latest"
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Pre-Flight Secret Verification Gate
+        run: |
+          chmod +x scripts/verify_secret_versions.sh
+          ./scripts/verify_secret_versions.sh
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Guardian Terraform Apply
+        run: |
+          guardian terraform apply \
+            -dir=terraform \
+            -storage-bucket=${{ vars.GCP_TF_STATE_BUCKET }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_URI="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/openclaw/app:latest"
+          docker build -t "$IMAGE_URI" -f docker/Dockerfile .
+          docker push "$IMAGE_URI"
+
+      - name: Refresh GCE Instance Container Metadata
+        run: |
+          IMAGE_URI="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/openclaw/app:latest"
+          gcloud compute instances add-metadata openclaw-instance \
+            --zone=${{ vars.GCP_ZONE }} \
+            --metadata=gce-container-declaration="spec:
+            containers:
+              - name: openclaw-app
+                image: '$IMAGE_URI'
+                securityContext:
+                  privileged: false
+                volumeMounts:
+                  - mountPath: /mnt/disks/openclaw-data
+                    name: openclaw-data-volume
+            volumes:
+              - name: openclaw-data-volume
+                gcePersistentDisk:
+                  pdName: openclaw-data-disk
+                  fsType: ext4" || true
