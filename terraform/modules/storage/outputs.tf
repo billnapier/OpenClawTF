@@ -17,3 +17,9 @@ output "disk_size_gb" {
   description = "The allocated size of the persistent disk in gigabytes."
   value       = google_compute_disk.openclaw_data.size
 }
+
+output "snapshot_policy_name" {
+  description = "The name of the automated disk snapshot resource policy."
+  value       = google_compute_resource_policy.snapshot_policy.name
+}
+
