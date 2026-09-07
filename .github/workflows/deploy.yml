@@ -8,6 +8,7 @@ on:
       - "terraform/**"
       - "docker/**"
       - ".github/workflows/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
