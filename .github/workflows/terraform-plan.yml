@@ -49,3 +49,5 @@ jobs:
           guardian plan \
             -dir=terraform \
             -storage=gcs://${{ vars.GCP_TF_STATE_BUCKET }}
+        env:
+          GUARDIAN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
