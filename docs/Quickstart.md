@@ -36,7 +36,8 @@ gcloud services enable \
   iamcredentials.googleapis.com \
   artifactregistry.googleapis.com \
   cloudresourcemanager.googleapis.com \
-  sts.googleapis.com
+  sts.googleapis.com \
+  calendar-json.googleapis.com
 ```
 
 ---
@@ -58,7 +59,7 @@ gcloud storage buckets create "gs://${BUCKET_NAME}" \
 
 ## 4. Manual Step 3: Populate GCP Secret Manager
 
-OpenClaw requires three secrets stored in GCP Secret Manager prior to VM provisioning. Runtime containers fetch these secrets directly via Application Default Credentials (ADC).
+OpenClaw requires secrets stored in GCP Secret Manager prior to VM provisioning. Runtime containers fetch these secrets directly via Application Default Credentials (ADC).
 
 ### A. Gemini API Key
 Obtain an API key from Google AI Studio and store it:
@@ -81,7 +82,17 @@ Specify a comma-separated list of numerical Telegram User IDs permitted to inter
 echo -n "123456789,987654321" | gcloud secrets create telegram-allowed-user-ids --data-file=-
 ```
 
+### D. Google Calendar OAuth Credentials (Optional)
+To enable Google Calendar tool execution (checking schedules, creating calendar events), generate OAuth 2.0 Client Credentials or Service Account credentials in the Google Cloud Console (`APIs & Services > Credentials`), download the JSON file, and seed it:
+
+```bash
+gcloud secrets create google-calendar-credentials --data-file="/path/to/credentials.json"
+```
+
+Once seeded, OpenClaw automatically detects the `google-calendar-credentials` secret payload and binds Google Calendar capabilities to conversational tool calls in Telegram.
+
 ---
+
 
 ## 5. Manual Step 4: Configure Workload Identity Federation (WIF) & GitHub Secrets
 

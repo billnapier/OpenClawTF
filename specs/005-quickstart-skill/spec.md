@@ -71,6 +71,8 @@ Per **Constitution Principle 7**, this skill MUST maintain 100% functional parit
 | `GEMINI_API_KEY` | None (User input required) | Sequential Interview |
 | `TELEGRAM_BOT_TOKEN` | None (User input required) | Sequential Interview |
 | `ALLOWED_USER_IDS` | None (User input required) | Sequential Interview |
+| `GOOGLE_CALENDAR_CREDENTIALS` | None (Optional: Path to `credentials.json`) | Sequential Interview |
+
 
 ---
 
