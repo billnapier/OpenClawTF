@@ -14,7 +14,8 @@ WORKDIR /app
 
 # Copy application entrypoint and assets
 COPY docker/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+COPY scripts /app/scripts
+RUN chmod +x /app/entrypoint.sh /app/scripts/*.sh /app/scripts/*.py
 
 # Persistent mount point directory setup
 RUN mkdir -p /mnt/disks/openclaw-data
