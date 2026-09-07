@@ -1,6 +1,6 @@
-# Deployment Implementation Roadmap: OpenClaw / NanoGemClaw on GCP
+# Deployment Implementation Roadmap: OpenClaw on GCP
 
-This document tracks the milestones, phases, and execution schedule for provisioning and deploying **OpenClaw** (or **NanoGemClaw**) on Google Cloud Platform (GCP) using Terraform and `abcxyz/guardian`.
+This document tracks the milestones, phases, and execution schedule for provisioning and deploying **OpenClaw** on Google Cloud Platform (GCP) using Terraform and `abcxyz/guardian`.
 
 ---
 
@@ -51,7 +51,7 @@ gantt
 * `modules/compute`: `google_compute_instance` definition integrating VPC subnetwork, attached persistent disk, and `metadata_startup_script`.
 
 ### Phase 3: Containerization & Pre-Boot Seeding Gate
-* `docker/Dockerfile`: Application container definition for OpenClaw / NanoGemClaw.
+* `docker/Dockerfile`: Application container definition for OpenClaw.
 * **Artifact Registry Image Push**: Build container image and push initial version to GCP Artifact Registry before VM provisioning.
 * **Secret Payload Seeding Gate**: Seed Secret Manager with initial secret versions (`GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`) to prevent boot-time secret fetching errors.
 * `docker/startup-script.sh`: VM bootstrap script to mount `/dev/disk/by-id/google-openclaw-data` to `/mnt/disks/openclaw-data`, fetch secrets from GCP Secret Manager, pull image from GCP Artifact Registry, and launch Docker container.

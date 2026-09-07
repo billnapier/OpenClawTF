@@ -4,7 +4,7 @@
 
 In Antigravity chat:
 ```
-@[nanogemclaw.bootstrap]
+@[openclaw.bootstrap]
 ```
 
 ## Running the Verification Script

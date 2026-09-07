@@ -1,7 +1,7 @@
 # Feature Specification: Interactive Quickstart & Onboarding Skill
 
 ## Feature Overview & Objectives
-The goal of this feature is to create a dedicated, interactive onboarding and bootstrapping skill (`nanogemclaw.bootstrap` / `openclaw.quickstart`) for Antigravity that automates GCP infrastructure enablement, Workload Identity Federation (WIF) provisioning, and GitHub repository configuration. 
+The goal of this feature is to create a dedicated, interactive onboarding and bootstrapping skill (`openclaw.bootstrap`) for Antigravity that automates GCP infrastructure enablement, Workload Identity Federation (WIF) provisioning, and GitHub repository configuration. 
 
 Per **Constitution Principle 7**, this skill MUST maintain 100% functional parity with [`docs/Quickstart.md`](../../docs/Quickstart.md), assume reasonable defaults for all input parameters, prompt the user for bulk confirmation/edits before taking action, and conduct step-by-step interviews for missing manual secrets.
 
@@ -76,7 +76,7 @@ Per **Constitution Principle 7**, this skill MUST maintain 100% functional parit
 
 ## Dependencies & Compliance
 
-- **Constitution Principle 7**: Quickstart documentation ([`docs/Quickstart.md`](../../docs/Quickstart.md)) and the onboarding skill (`nanogemclaw.bootstrap`) MUST remain strictly in sync.
+- **Constitution Principle 7**: Quickstart documentation ([`docs/Quickstart.md`](../../docs/Quickstart.md)) and the onboarding skill (`openclaw.bootstrap`) MUST remain strictly in sync.
 - **Keyless Security (Principle 3)**: Authentication between GitHub Actions and GCP MUST use Workload Identity Federation (WIF).
 - **Prerequisites**: `gcloud` CLI authenticated with active GCP permissions, `gh` CLI authenticated with GitHub repository write permissions.
 

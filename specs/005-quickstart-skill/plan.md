@@ -1,12 +1,12 @@
 # Architecture Plan: Interactive Quickstart & Onboarding Skill
 
 ## Proposed Architecture
-This feature creates an interactive onboarding skill (`skills/nanogemclaw.bootstrap/SKILL.md`) and a verification script (`scripts/verify_wif_bootstrap.sh`) to automate GCP infrastructure setup, secret injection, WIF provisioning, and GitHub configuration in 100% parity with `docs/Quickstart.md`.
+This feature creates an interactive onboarding skill (`skills/openclaw.bootstrap/SKILL.md`) and a verification script (`scripts/verify_wif_bootstrap.sh`) to automate GCP infrastructure setup, secret injection, WIF provisioning, and GitHub configuration in 100% parity with `docs/Quickstart.md`.
 
 ### Directory Structure
 ```
 skills/
-└── nanogemclaw.bootstrap/
+└── openclaw.bootstrap/
     └── SKILL.md                     # Antigravity interactive onboarding skill
 scripts/
 └── verify_wif_bootstrap.sh         # Automated validation script for GCP APIs, buckets, secrets, and WIF
@@ -22,7 +22,7 @@ specs/
 
 ## Step-by-Step Implementation Strategy
 
-1. **Quickstart Onboarding Skill (`skills/nanogemclaw.bootstrap/SKILL.md`)**:
+1. **Quickstart Onboarding Skill (`skills/openclaw.bootstrap/SKILL.md`)**:
    - Environment Parameter Auto-Detection (GCP Project ID, Repo name, Region, Zone, State bucket).
    - Bulk Confirmation step presenting all detected settings in a single markdown table.
    - Sequential Secret Interview for missing credentials (`GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `ALLOWED_USER_IDS`).
