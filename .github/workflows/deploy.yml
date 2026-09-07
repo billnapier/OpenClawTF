@@ -47,29 +47,12 @@ jobs:
       - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Guardian Terraform Plan
+      - name: Terraform Init & Apply
         run: |
-          guardian plan \
-            -dir=terraform \
-            -storage=gcs://${{ vars.GCP_TF_STATE_BUCKET }} \
-            -allow-lockfile-changes \
-            -skip-reporting
+          cd terraform
+          terraform init
+          terraform apply -auto-approve
         env:
-          GUARDIAN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
-          TF_VAR_region: ${{ vars.GCP_REGION }}
-          TF_VAR_zone: ${{ vars.GCP_ZONE }}
-          TF_VAR_service_account_email: ${{ vars.GCP_SERVICE_ACCOUNT }}
-
-      - name: Guardian Terraform Apply
-        run: |
-          guardian apply \
-            -dir=terraform \
-            -storage=gcs://${{ vars.GCP_TF_STATE_BUCKET }} \
-            -allow-lockfile-changes \
-            -skip-reporting
-        env:
-          GUARDIAN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_zone: ${{ vars.GCP_ZONE }}
