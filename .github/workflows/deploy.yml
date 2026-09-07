@@ -52,7 +52,8 @@ jobs:
           guardian plan \
             -dir=terraform \
             -storage=gcs://${{ vars.GCP_TF_STATE_BUCKET }} \
-            -allow-lockfile-changes
+            -allow-lockfile-changes \
+            -skip-reporting
         env:
           GUARDIAN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
@@ -65,7 +66,8 @@ jobs:
           guardian apply \
             -dir=terraform \
             -storage=gcs://${{ vars.GCP_TF_STATE_BUCKET }} \
-            -allow-lockfile-changes
+            -allow-lockfile-changes \
+            -skip-reporting
         env:
           GUARDIAN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
