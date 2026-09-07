@@ -20,5 +20,6 @@ The proposed architecture establishes a secure, automated, and persistent deploy
 
 For complete technical specifications, repository structure, and execution phases, refer to:
 
+* **[Product Requirements Document (docs/PRD.md)](PRD.md)**: Product vision, user personas (Administrator & End-User), Critical User Journeys (CUJs), onboarding, access control rejection UX, and error feedback protocols.
 * **[Design Document (docs/Design.md)](Design.md)**: Detailed system architecture diagram, key architectural decisions (OS/container strategy, Guardian tooling, secret injection, storage), and modular Terraform layout.
 * **[Implementation Roadmap (docs/Roadmap.md)](Roadmap.md)**: Four-phase deployment roadmap, Gantt chart, and task breakdowns from planning to Guardian CI/CD automation.
