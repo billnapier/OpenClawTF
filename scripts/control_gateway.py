@@ -9,7 +9,7 @@ import sys
 import json
 import time
 import urllib.parse
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 PORT = int(os.environ.get("OPENCLAW_CONTROL_PORT", 18789))
 
@@ -480,7 +480,8 @@ class ControlGatewayHandler(BaseHTTPRequestHandler):
 
 def run_server():
     server_address = ("0.0.0.0", PORT)
-    httpd = HTTPServer(server_address, ControlGatewayHandler)
+    httpd = ThreadingHTTPServer(server_address, ControlGatewayHandler)
+
     print(f"[CONTROL GATEWAY] OpenClaw Control UI Web Server running on port {PORT}...")
     try:
         httpd.serve_forever()
