@@ -56,8 +56,8 @@ seed_secret_payload() {
   echo "[SUCCESS] Secret '$secret_id' version seeded successfully."
 }
 
-seed_secret_payload "openclaw-gemini-api-key" "$GEMINI_API_KEY"
-seed_secret_payload "openclaw-telegram-bot-token" "$TELEGRAM_BOT_TOKEN"
-seed_secret_payload "openclaw-telegram-allowed-user-ids" "$ALLOWED_USER_IDS"
+seed_secret_payload "gemini-api-key" "$GEMINI_API_KEY"
+seed_secret_payload "telegram-bot-token" "$TELEGRAM_BOT_TOKEN"
+seed_secret_payload "telegram-allowed-user-ids" "$ALLOWED_USER_IDS"
 
 echo "[SEED_SECRETS] Seeding completed."

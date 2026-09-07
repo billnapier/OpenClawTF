@@ -11,9 +11,9 @@ fi
 echo "[PRE-FLIGHT GATE] Verifying required GCP Secret Manager versions for project '$PROJECT_ID'..."
 
 REQUIRED_SECRETS=(
-  "openclaw-gemini-api-key"
-  "openclaw-telegram-bot-token"
-  "openclaw-telegram-allowed-user-ids"
+  "gemini-api-key"
+  "telegram-bot-token"
+  "telegram-allowed-user-ids"
 )
 
 FAILED=0
