@@ -35,3 +35,10 @@ variable "labels" {
     app         = "openclaw"
   }
 }
+
+variable "region" {
+  description = "GCP Region where the snapshot resource policy is provisioned."
+  type        = string
+  default     = "us-central1"
+}
+
