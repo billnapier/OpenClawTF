@@ -1,8 +1,8 @@
 <!-- SYNC IMPACT REPORT
-Version change: v1.3.0 → v1.4.0
+Version change: v1.4.0 → v1.5.0
 Modified principles: None
 Added sections:
-  - Principle 10: Extension Architecture Selection Framework (Core Plugin vs. MCP Server)
+  - Principle 11: Production-Grade Engineering & Prohibition of Unapproved Workarounds
 Removed sections: None
 Templates requiring updates:
   - docs/Quickstart.md (✅ checked / aligned)
@@ -12,7 +12,7 @@ Follow-up TODOs: None
 
 # OpenClawTF Project Constitution
 
-**Version**: v1.4.0  
+**Version**: v1.5.0  
 **Ratification Date**: 2026-09-06  
 **Last Amended Date**: 2026-09-07  
 
@@ -99,6 +99,14 @@ All new tools, integrations, and ClawHub skills MUST be evaluated against a stri
 
 *Rationale: Standardizes extension design decisions, prevents dependency pollution in core application containers, guarantees process isolation for third-party tools, and maximizes portability across the broader AI ecosystem.*
 
+### Principle 11: Production-Grade Engineering & Prohibition of Unapproved Workarounds
+
+All design choices, code implementations, error handling, and architecture patterns MUST adhere to production-grade engineering standards from inception. Ad-hoc workarounds, hardcoded shortcuts (such as string matching in place of LLM function calling), temporary bypasses, or "cheap quick hacks" are strictly prohibited. 
+
+If an emergency or exceptional circumstance ever appears to require a temporary workaround or non-standard implementation, the assistant MUST explicitly disclose the trade-offs to the user and obtain explicit user confirmation BEFORE implementing any workaround.
+
+*Rationale: Ensures long-term maintainability, eliminates technical debt at inception, and enforces transparent engineering rigor.*
+
 ---
 
 ## Governance & Amendment Policy
@@ -107,6 +115,6 @@ All new tools, integrations, and ClawHub skills MUST be evaluated against a stri
 2. **Amendment Process**: Amendments to this Constitution require a Pull Request detailing the proposed change, rationale, and a Sync Impact Report updating all affected templates and documentation.
 3. **Versioning Policy**:
    * **MAJOR** (e.g., v1.0.0 → v2.0.0): Incompatible principle removals or foundational architecture redefinitions.
-   * **MINOR** (e.g., v1.0.0 → v1.4.0): New principles, expanded compliance checks, or structural additions.
+   * **MINOR** (e.g., v1.0.0 → v1.5.0): New principles, expanded compliance checks, or structural additions.
    * **PATCH** (e.g., v1.0.0 → v1.0.1): Clarifications, wording refinements, or typo fixes.
 4. **Compliance Enforcement**: All Pull Requests MUST be validated against this Constitution prior to merging into `main`.
