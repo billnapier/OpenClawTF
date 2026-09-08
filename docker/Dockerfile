@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir \
+    uv==0.4.15 \
     mcp==1.2.0 \
     google-api-python-client==2.118.0 \
     google-auth==2.28.0 \

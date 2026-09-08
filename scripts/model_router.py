@@ -75,12 +75,11 @@ class ModelRouter:
 
     def get_tools(self):
         try:
-            import subprocess
-            import os
-            bridge = os.path.join(os.path.dirname(os.path.realpath(__file__)), "gworkspace_mcp_bridge.py")
-            res = subprocess.run([sys.executable, bridge, "--list"], capture_output=True, text=True, timeout=5)
-            if res.returncode == 0:
-                return json.loads(res.stdout).get("tools", [])
+            from tool_gateway import ToolGateway
+            gw = ToolGateway()
+            res = gw.list_mcp_tools()
+            if res.get("status") == "success":
+                return res.get("tools", [])
         except Exception:
             pass
         return []
