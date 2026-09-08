@@ -37,7 +37,13 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   cloudresourcemanager.googleapis.com \
   sts.googleapis.com \
-  calendar-json.googleapis.com
+  gmail.googleapis.com \
+  calendar-json.googleapis.com \
+  drive.googleapis.com \
+  docs.googleapis.com \
+  sheets.googleapis.com \
+  tasks.googleapis.com \
+  people.googleapis.com
 ```
 
 ---
@@ -82,14 +88,14 @@ Specify a comma-separated list of numerical Telegram User IDs permitted to inter
 echo -n "123456789,987654321" | gcloud secrets create telegram-allowed-user-ids --data-file=-
 ```
 
-### E. Google Workspace MCP OAuth Credentials
+### D. Google Workspace MCP OAuth Credentials
 To enable the Google Workspace MCP Server (Gmail, Calendar, Drive, Docs, Sheets, Tasks, Contacts), generate OAuth 2.0 Client credentials in Google Cloud Console (`APIs & Services > Credentials`), download the JSON file, and seed it into Secret Manager:
 
 ```bash
 gcloud secrets create google-workspace-credentials --data-file="/path/to/workspace-credentials.json"
 ```
 
-Once seeded, OpenClaw automatically initializes the Google Workspace MCP Server (`gworkspace_mcp_bridge.py`) over stdio JSON-RPC per **Principle 10**.
+Once seeded, OpenClaw automatically initializes the native Google Workspace MCP Server (`uvx --from google-workspace-mcp google-workspace-worker`) over stdio JSON-RPC per **Principle 10**.
 
 ---
 
