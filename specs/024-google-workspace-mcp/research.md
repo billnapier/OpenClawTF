@@ -3,13 +3,14 @@
 ## Technical Decisions & Rationale
 
 ### 1. Integration Package Selection
-* **Decision**: Adopt the standard open-source `google_workspace_mcp` package installed via `pip` (or `npm`) inside the immutable Docker container image (`docker/Dockerfile`), pinned strictly to explicit release version (e.g. `google-workspace-mcp==1.2.0`).
+* **Decision**: Adopt the standard open-source `google-workspace-mcp` package run natively via `uvx` (`uvx --from google-workspace-mcp google-workspace-worker`) inside the immutable Docker container image (`docker/Dockerfile`), pinned strictly to explicit release version (`google-workspace-mcp==1.2.0`).
 * **Rationale**:
   * **Principle 10 Compliance**: Fully implements Model Context Protocol (MCP) over standard JSON-RPC `stdio` process pipes.
-  * **Principle 6 Compliance**: Version is explicitly pinned in `Dockerfile` and `requirements.txt` to eliminate floating dependency risks.
+  * **Principle 6 Compliance**: Version is explicitly pinned in `Dockerfile` to eliminate floating dependency risks.
+  * **Zero Local Bridge / Wrapper Code**: No custom bridge script (`gworkspace_mcp_bridge.py`) exists; `tool_gateway.py` communicates directly as an MCP Client over stdio with the native package worker.
   * **Broad Tool Surface**: Provides pre-built, tested tool definitions for Gmail, Google Calendar, Google Drive, Google Docs, Google Sheets, Google Tasks, and Google Contacts.
 * **Alternatives Considered**:
-  * Custom `mcp.server.fastmcp` Python script: Rejected to prevent custom code maintenance overhead for 10+ Google API schemas.
+  * Custom bridge or custom `FastMCP` script: Rejected to eliminate technical debt and schema duplication.
   * Remote GCP Cloud Run MCP Endpoint: Deferred; stdio local process communication inside VM/container is faster and simpler for OpenClaw's architecture.
 
 ---

@@ -8,12 +8,12 @@ echo "============================================================"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-echo "[TEST 1] Verifying gworkspace_mcp_bridge.py tool listing..."
-TOOLS_JSON=$(python3 "${SCRIPT_DIR}/gworkspace_mcp_bridge.py" --list)
+echo "[TEST 1] Verifying ToolGateway MCP tool listing..."
+TOOLS_JSON=$(python3 "${SCRIPT_DIR}/tool_gateway.py" --tool list_mcp_tools)
 if echo "$TOOLS_JSON" | grep -q "calendar_list_events" && echo "$TOOLS_JSON" | grep -q "gmail_search"; then
-  echo "✓ PASS: MCP bridge returns 9 Workspace tool definitions."
+  echo "✓ PASS: ToolGateway returns Workspace tool definitions."
 else
-  echo "✗ FAIL: MCP bridge failed to list tools."
+  echo "✗ FAIL: ToolGateway failed to list tools."
   exit 1
 fi
 
@@ -28,8 +28,8 @@ fi
 
 echo "[TEST 3] Verifying Gmail & Drive tool execution via MCP..."
 GMAIL_RES=$(python3 "${SCRIPT_DIR}/tool_gateway.py" --tool call_mcp_tool --arg1 gmail_search --arg2 '{"query":"is:unread"}')
-if echo "$GMAIL_RES" | grep -q "Q3 Infrastructure"; then
-  echo "✓ PASS: Gmail search via MCP returned valid email messages."
+if echo "$GMAIL_RES" | grep -q '"status": "success"'; then
+  echo "✓ PASS: Gmail search via MCP returned success status."
 else
   echo "✗ FAIL: Gmail search via MCP failed."
   exit 1
