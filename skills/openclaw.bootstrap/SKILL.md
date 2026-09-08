@@ -25,12 +25,13 @@ Interactively ask the user for required credentials one at a time:
 1. **Gemini API Key** (from Google AI Studio).
 2. **Telegram Bot Token** (from [@BotFather](https://t.me/BotFather)).
 3. **Allowed Telegram User IDs** (comma-separated, obtained via [@userinfobot](https://t.me/userinfobot)).
+4. **Google Workspace OAuth Credentials** (JSON payload for Workspace MCP Server).
 
 ### Step 3: GCP Infrastructure & WIF Actuation
 Run `gcloud` commands to:
-1. Enable GCP APIs: `compute`, `secretmanager`, `iam`, `iamcredentials`, `artifactregistry`, `cloudresourcemanager`, `sts`.
+1. Enable GCP APIs: `compute`, `secretmanager`, `iam`, `iamcredentials`, `artifactregistry`, `cloudresourcemanager`, `sts`, `gmail`, `calendar-json`, `drive`, `docs`, `sheets`, `tasks`, `people`.
 2. Create GCS remote state bucket `gs://<project_id>-tfstate` with uniform bucket-level access.
-3. Seed secrets in GCP Secret Manager (`gemini-api-key`, `telegram-bot-token`, `telegram-allowed-user-ids`).
+3. Seed secrets in GCP Secret Manager (`gemini-api-key`, `telegram-bot-token`, `telegram-allowed-user-ids`, `google-workspace-credentials`).
 4. Provision deployment Service Account `terraform-deployer` and assign `roles/owner` or required deployment roles.
 5. Create Workload Identity Pool `github-pool` and Provider `github-provider` mapping repository claims.
 

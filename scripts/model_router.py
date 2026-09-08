@@ -73,6 +73,18 @@ class ModelRouter:
             "status": simulate_status
         }
 
+    def get_tools(self):
+        try:
+            import subprocess
+            import os
+            bridge = os.path.join(os.path.dirname(os.path.realpath(__file__)), "gworkspace_mcp_bridge.py")
+            res = subprocess.run([sys.executable, bridge, "--list"], capture_output=True, text=True, timeout=5)
+            if res.returncode == 0:
+                return json.loads(res.stdout).get("tools", [])
+        except Exception:
+            pass
+        return []
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="OpenClaw Model Router CLI")
     parser.add_argument("--cmd", type=str, help="Slash command e.g. '/model pro'")

@@ -86,10 +86,51 @@ def process_update(update):
     print(f"[DAEMON AUTH] Processing message from authorized User ID {user_id}: {text}", flush=True)
 
     if text in ["/start", "/help"]:
-        send_telegram_message(chat_id, "🤖 OpenClaw Bot Active!\nSend any message to chat with Gemini AI, or use /status to check bot status.")
+        send_telegram_message(chat_id, "🤖 OpenClaw Bot Active!\nSend any message to chat with Gemini AI, or use Workspace commands:\n/calendar - Agenda\n/gmail - Inbox search\n/drive - File search\n/status - System status")
         return
     elif text == "/status":
-        send_telegram_message(chat_id, f"✅ OpenClaw Status: Online\nWhitelisted Users: {len(allowed_ids)}\nModel: gemini-3.6-flash")
+        send_telegram_message(chat_id, f"✅ OpenClaw Status: Online\nWhitelisted Users: {len(allowed_ids)}\nModel: gemini-2.5-flash\nWorkspace MCP Integration: Active")
+        return
+    elif text.startswith("/calendar"):
+        from tool_gateway import ToolGateway
+        gw = ToolGateway()
+        res = gw.call_mcp_tool("calendar_list_events")
+        events = res.get("output", {}).get("events", [])
+        if events:
+            lines = ["📅 *Upcoming Calendar Events:*"]
+            for ev in events:
+                lines.append(f"• *{ev.get('summary')}* ({ev.get('start')} - {ev.get('end')})\n  {ev.get('location', '')}")
+            send_telegram_message(chat_id, "\n".join(lines))
+        else:
+            send_telegram_message(chat_id, "📅 No calendar events found.")
+        return
+    elif text.startswith("/gmail"):
+        from tool_gateway import ToolGateway
+        gw = ToolGateway()
+        query = text[7:].strip() or "is:unread"
+        res = gw.call_mcp_tool("gmail_search", json.dumps({"query": query}))
+        msgs = res.get("output", {}).get("messages", [])
+        if msgs:
+            lines = [f"📧 *Gmail Search Results ('{query}'):*"]
+            for m in msgs:
+                lines.append(f"• *From:* {m.get('from')}\n  *Subject:* {m.get('subject')}\n  _{m.get('snippet')}_")
+            send_telegram_message(chat_id, "\n".join(lines))
+        else:
+            send_telegram_message(chat_id, f"📧 No messages found for query '{query}'.")
+        return
+    elif text.startswith("/drive"):
+        from tool_gateway import ToolGateway
+        gw = ToolGateway()
+        query = text[6:].strip() or "OpenClaw"
+        res = gw.call_mcp_tool("drive_search_files", json.dumps({"query": query}))
+        files = res.get("output", {}).get("files", [])
+        if files:
+            lines = [f"📁 *Drive Search Results ('{query}'):*"]
+            for f in files:
+                lines.append(f"• *{f.get('name')}* ({f.get('mimeType')})\n  Link: {f.get('webViewLink')}")
+            send_telegram_message(chat_id, "\n".join(lines))
+        else:
+            send_telegram_message(chat_id, f"📁 No files found for query '{query}'.")
         return
 
     # Query Gemini and reply
