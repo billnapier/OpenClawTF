@@ -1,20 +1,21 @@
 <!-- SYNC IMPACT REPORT
-Version change: v1.1.0 → v1.2.0
+Version change: v1.2.0 → v1.3.0
 Modified principles: None
 Added sections:
-  - Principle 7: Synchronized Manual Setup Documentation & Interactive Onboarding Skill
+  - Principle 8: Prefer Native Framework Capabilities & Maximum Component Reuse
+  - Principle 9: Immutable Read-Only Container Image Binaries
 Removed sections: None
 Templates requiring updates:
-  - docs/Quickstart.md (✅ updated / aligned)
-  - /home/napier/.gemini/antigravity/skills/nanogemclaw.bootstrap/SKILL.md (✅ updated / aligned)
+  - docs/Quickstart.md (✅ checked / aligned)
+  - skills/openclaw.bootstrap/SKILL.md (✅ checked / aligned)
 Follow-up TODOs: None
 -->
 
 # OpenClawTF Project Constitution
 
-**Version**: v1.2.0  
+**Version**: v1.3.0  
 **Ratification Date**: 2026-09-06  
-**Last Amended Date**: 2026-09-06  
+**Last Amended Date**: 2026-09-07  
 
 ---
 
@@ -71,11 +72,23 @@ Furthermore, the AI coding assistant / LLM MUST actively verify that all referen
 
 ### Principle 7: Synchronized Manual Setup Documentation & Interactive Onboarding Skill
 
-All required manual configuration and GCP setup prerequisites MUST be documented in human-readable Markdown format in `docs/Quickstart.md` (and related module quickstarts). Furthermore, a dedicated executable onboarding skill (e.g., `nanogemclaw.bootstrap` / QuickStart skill) MUST be provided to allow users to interactively perform or verify the setup with Antigravity.
+All required manual configuration and GCP setup prerequisites MUST be documented in human-readable Markdown format in `docs/Quickstart.md` (and related module quickstarts). Furthermore, a dedicated executable onboarding skill (e.g., `openclaw.bootstrap` / QuickStart skill) MUST be provided to allow users to interactively perform or verify the setup with Antigravity.
 
 The onboarding skill MUST assume sensible defaults for all input parameters, explicitly prompt the user to review and confirm or change those parameters prior to execution, and maintain strict functional parity with `docs/Quickstart.md` at all times. Whenever manual setup procedures change, `docs/Quickstart.md` and the onboarding skill MUST be updated simultaneously.
 
 *Rationale: Ensures seamless developer onboarding, eliminates documentation drift, and reduces setup friction for cloud infrastructure deployment.*
+
+### Principle 8: Prefer Native Framework Capabilities & Maximum Component Reuse
+
+Custom one-off scripts, ad-hoc hacks, or duplicate custom implementations MUST NOT be created when existing native OpenClaw framework capabilities (such as Gemini Function Calling, `tool_gateway.py`, `plugin_runner.py`, or Model Context Protocol / MCP) can achieve the desired outcome. All features and integrations MUST reuse and extend established OpenClaw abstractions.
+
+*Rationale: Prevents non-standard ad-hoc code sprawl, reduces maintenance overhead, and maintains architectural consistency across the OpenClaw ecosystem.*
+
+### Principle 9: Immutable Read-Only Container Image Binaries
+
+All executable binaries, CLI tools, custom scripts, and runtime dependencies MUST be installed and packaged into the read-only Docker container image during the build phase (`Dockerfile`). Binaries and executable code MUST NOT be stored on persistent disk volumes (`/mnt/disks/openclaw-data`) or dynamically downloaded onto the host at runtime. Persistent disks MUST be reserved strictly for stateful data, database files, and application logs.
+
+*Rationale: Guarantees container immutability, deterministic deployments, rapid VM recovery, and zero host-level executable drift.*
 
 ---
 
@@ -85,6 +98,6 @@ The onboarding skill MUST assume sensible defaults for all input parameters, exp
 2. **Amendment Process**: Amendments to this Constitution require a Pull Request detailing the proposed change, rationale, and a Sync Impact Report updating all affected templates and documentation.
 3. **Versioning Policy**:
    * **MAJOR** (e.g., v1.0.0 → v2.0.0): Incompatible principle removals or foundational architecture redefinitions.
-   * **MINOR** (e.g., v1.0.0 → v1.2.0): New principles, expanded compliance checks, or structural additions.
+   * **MINOR** (e.g., v1.0.0 → v1.3.0): New principles, expanded compliance checks, or structural additions.
    * **PATCH** (e.g., v1.0.0 → v1.0.1): Clarifications, wording refinements, or typo fixes.
 4. **Compliance Enforcement**: All Pull Requests MUST be validated against this Constitution prior to merging into `main`.
