@@ -36,7 +36,10 @@ class ModelRouter:
             pass
 
     def get_model(self, session_id="default"):
-        return self.sessions.get(session_id, DEFAULT_MODEL)
+        val = self.sessions.get(session_id, DEFAULT_MODEL)
+        if val not in MODELS.values():
+            return DEFAULT_MODEL
+        return val
 
     def handle_slash_command(self, command_str, session_id="default"):
         parts = command_str.strip().split()
