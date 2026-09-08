@@ -49,6 +49,16 @@ if [ -z "$TELEGRAM_ALLOWED_USER_IDS" ]; then
   export TELEGRAM_ALLOWED_USER_IDS
 fi
 
+if [ -z "$GOOGLE_WORKSPACE_CREDENTIALS" ]; then
+  GOOGLE_WORKSPACE_CREDENTIALS=$(fetch_secret "google-workspace-credentials" || fetch_secret "openclaw-google-workspace-credentials" || true)
+  export GOOGLE_WORKSPACE_CREDENTIALS
+fi
+
+if [ -z "$GOOGLE_CALENDAR_CREDENTIALS" ]; then
+  GOOGLE_CALENDAR_CREDENTIALS=$(fetch_secret "google-calendar-credentials" || fetch_secret "openclaw-google-calendar-credentials" || true)
+  export GOOGLE_CALENDAR_CREDENTIALS
+fi
+
 # Ensure data directory exists on persistent disk mount
 DATA_DIR="${DATA_DIR:-/mnt/disks/openclaw-data}"
 mkdir -p "$DATA_DIR"

@@ -82,14 +82,14 @@ Specify a comma-separated list of numerical Telegram User IDs permitted to inter
 echo -n "123456789,987654321" | gcloud secrets create telegram-allowed-user-ids --data-file=-
 ```
 
-### D. Google Calendar OAuth Credentials (Optional)
-To enable Google Calendar tool execution (checking schedules, creating calendar events), generate OAuth 2.0 Client Credentials or Service Account credentials in the Google Cloud Console (`APIs & Services > Credentials`), download the JSON file, and seed it:
+### E. Google Workspace MCP OAuth Credentials
+To enable the Google Workspace MCP Server (Gmail, Calendar, Drive, Docs, Sheets, Tasks, Contacts), generate OAuth 2.0 Client credentials in Google Cloud Console (`APIs & Services > Credentials`), download the JSON file, and seed it into Secret Manager:
 
 ```bash
-gcloud secrets create google-calendar-credentials --data-file="/path/to/credentials.json"
+gcloud secrets create google-workspace-credentials --data-file="/path/to/workspace-credentials.json"
 ```
 
-Once seeded, OpenClaw automatically detects the `google-calendar-credentials` secret payload and binds Google Calendar capabilities to conversational tool calls in Telegram.
+Once seeded, OpenClaw automatically initializes the Google Workspace MCP Server (`gworkspace_mcp_bridge.py`) over stdio JSON-RPC per **Principle 10**.
 
 ---
 
