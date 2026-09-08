@@ -38,11 +38,17 @@ def send_telegram_message(chat_id, text):
     except Exception as e:
         print(f"[DAEMON ERROR] Failed to send message to Telegram chat {chat_id}: {e}", flush=True)
 
-def query_gemini(prompt):
+def query_gemini(prompt, session_id="default"):
     api_key = os.environ.get("GEMINI_API_KEY", "").strip() or GEMINI_API_KEY
     if not api_key:
         return "Error: GEMINI_API_KEY is not configured on OpenClaw server."
-    model = "gemini-2.5-flash"
+    try:
+        from model_router import ModelRouter
+        router = ModelRouter()
+        model = router.get_model(session_id)
+    except Exception:
+        model = "gemini-flash-latest"
+
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     payload = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}]
