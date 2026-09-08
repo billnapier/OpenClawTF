@@ -1,9 +1,8 @@
 <!-- SYNC IMPACT REPORT
-Version change: v1.2.0 → v1.3.0
+Version change: v1.3.0 → v1.4.0
 Modified principles: None
 Added sections:
-  - Principle 8: Prefer Native Framework Capabilities & Maximum Component Reuse
-  - Principle 9: Immutable Read-Only Container Image Binaries
+  - Principle 10: Extension Architecture Selection Framework (Core Plugin vs. MCP Server)
 Removed sections: None
 Templates requiring updates:
   - docs/Quickstart.md (✅ checked / aligned)
@@ -13,7 +12,7 @@ Follow-up TODOs: None
 
 # OpenClawTF Project Constitution
 
-**Version**: v1.3.0  
+**Version**: v1.4.0  
 **Ratification Date**: 2026-09-06  
 **Last Amended Date**: 2026-09-07  
 
@@ -90,6 +89,16 @@ All executable binaries, CLI tools, custom scripts, and runtime dependencies MUS
 
 *Rationale: Guarantees container immutability, deterministic deployments, rapid VM recovery, and zero host-level executable drift.*
 
+### Principle 10: Extension Architecture Selection Framework (Core Plugin vs. MCP Server)
+
+All new tools, integrations, and ClawHub skills MUST be evaluated against a strict architecture selection decision framework prior to design approval and implementation:
+
+1. **Core Native Plugins (`plugin_runner.py` / `tool_gateway.py`)**: MUST be reserved strictly for first-party, tightly coupled system features (e.g., internal health probes, sqlite storage, sub-millisecond in-process utilities) that require zero external dependency overhead.
+2. **Model Context Protocol (MCP) Servers**: MUST be used for all third-party integrations (e.g., Google Calendar, GitHub, Slack, databases), polyglot runtime modules (TypeScript, Go, Rust), or tools with complex external package dependencies. MCP servers MUST execute as isolated processes or sidecar containers communicating via standard JSON-RPC.
+3. **Architectural Justification**: Technical design documents (`plan.md`) MUST document the chosen integration strategy (Core Plugin vs. MCP Server) based on process isolation, dependency pollution risk, and cross-agent ecosystem compatibility.
+
+*Rationale: Standardizes extension design decisions, prevents dependency pollution in core application containers, guarantees process isolation for third-party tools, and maximizes portability across the broader AI ecosystem.*
+
 ---
 
 ## Governance & Amendment Policy
@@ -98,6 +107,6 @@ All executable binaries, CLI tools, custom scripts, and runtime dependencies MUS
 2. **Amendment Process**: Amendments to this Constitution require a Pull Request detailing the proposed change, rationale, and a Sync Impact Report updating all affected templates and documentation.
 3. **Versioning Policy**:
    * **MAJOR** (e.g., v1.0.0 → v2.0.0): Incompatible principle removals or foundational architecture redefinitions.
-   * **MINOR** (e.g., v1.0.0 → v1.3.0): New principles, expanded compliance checks, or structural additions.
+   * **MINOR** (e.g., v1.0.0 → v1.4.0): New principles, expanded compliance checks, or structural additions.
    * **PATCH** (e.g., v1.0.0 → v1.0.1): Clarifications, wording refinements, or typo fixes.
 4. **Compliance Enforcement**: All Pull Requests MUST be validated against this Constitution prior to merging into `main`.
