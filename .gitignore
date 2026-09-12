@@ -14,11 +14,15 @@ override.tf.json
 *.pem
 *.key
 terraform.tfvars
-token.json
 
 # OS & IDE
 .DS_Store
 .vscode/
 .idea/
+
+# OAuth & Credential Files (never commit these)
+token.json
+*_token.json
+credentials.json
 __pycache__/
 *.pyc

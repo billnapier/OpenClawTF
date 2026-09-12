@@ -1,7 +1,7 @@
 ---
 name: openclaw.bootstrap
 description: Automated end-to-end setup of GCP infrastructure, Workload Identity Federation (WIF), GCP secrets, and GitHub repo secrets/variables for OpenClaw.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # OpenClaw Onboarding & Infrastructure Bootstrapper
@@ -25,15 +25,18 @@ Interactively ask the user for required credentials one at a time:
 1. **Gemini API Key** (from Google AI Studio).
 2. **Telegram Bot Token** (from [@BotFather](https://t.me/BotFather)).
 3. **Allowed Telegram User IDs** (comma-separated, obtained via [@userinfobot](https://t.me/userinfobot)).
-4. **Google Workspace OAuth Credentials** (JSON payload for Workspace MCP Server).
+
+> **Google Workspace**: Gmail, Calendar, Drive, and Tasks integration uses the **ClawHub `gog` skill** — NOT GCP Secret Manager credentials. Ask the user if they want to set up Google Workspace access, and if so, guide them to run `gog auth login` after bootstrap completes (Spec 025).
 
 ### Step 3: GCP Infrastructure & WIF Actuation
 Run `gcloud` commands to:
-1. Enable GCP APIs: `compute`, `secretmanager`, `iam`, `iamcredentials`, `artifactregistry`, `cloudresourcemanager`, `sts`, `gmail`, `calendar-json`, `drive`, `docs`, `sheets`, `tasks`, `people`.
+1. Enable GCP APIs: `compute`, `secretmanager`, `iam`, `iamcredentials`, `artifactregistry`, `cloudresourcemanager`, `sts`.
 2. Create GCS remote state bucket `gs://<project_id>-tfstate` with uniform bucket-level access.
-3. Seed secrets in GCP Secret Manager (`gemini-api-key`, `telegram-bot-token`, `telegram-allowed-user-ids`, `google-workspace-credentials`).
+3. Seed secrets in GCP Secret Manager (`gemini-api-key`, `telegram-bot-token`, `telegram-allowed-user-ids`).
 4. Provision deployment Service Account `terraform-deployer` and assign `roles/owner` or required deployment roles.
 5. Create Workload Identity Pool `github-pool` and Provider `github-provider` mapping repository claims.
+
+> **Note**: Google Workspace APIs (`gmail`, `calendar-json`, `drive`, etc.) are NOT enabled here. They are managed by the ClawHub `gog` skill when the user runs `gog auth login` (Spec 025).
 
 ### Step 4: GitHub Secrets & Variables Configuration
 Run `gh` CLI commands to set:

@@ -1,20 +1,24 @@
 <!-- SYNC IMPACT REPORT
-Version change: v1.4.0 → v1.5.0
-Modified principles: None
-Added sections:
-  - Principle 11: Production-Grade Engineering & Prohibition of Unapproved Workarounds
+Version change: v1.5.0 → v1.6.0
+Modified principles:
+  - Principle 10: Amended to establish ClawHub skills (gog) as preferred over custom MCP servers for Google Workspace integrations
+Added sections: None
 Removed sections: None
 Templates requiring updates:
   - docs/Quickstart.md (✅ checked / aligned)
+  - docs/Roadmap.md (✅ checked / aligned — Phase 9 added)
   - skills/openclaw.bootstrap/SKILL.md (✅ checked / aligned)
-Follow-up TODOs: None
+  - specs/024-google-workspace-mcp/spec.md (✅ marked ABANDONED)
+  - specs/025-google-workspace-clawhub/spec.md (✅ created)
+Decision Record: Spec 024 (MCP approach) abandoned due to JSON-RPC/Gemini schema incompatibility. ClawHub gog skill is the approved replacement.
+Follow-up TODOs: Implement Spec 025 once clawhub/gog skill is published.
 -->
 
 # OpenClawTF Project Constitution
 
-**Version**: v1.5.0  
+**Version**: v1.6.0  
 **Ratification Date**: 2026-09-06  
-**Last Amended Date**: 2026-09-07  
+**Last Amended Date**: 2026-09-12  
 
 ---
 
@@ -89,15 +93,16 @@ All executable binaries, CLI tools, custom scripts, and runtime dependencies MUS
 
 *Rationale: Guarantees container immutability, deterministic deployments, rapid VM recovery, and zero host-level executable drift.*
 
-### Principle 10: Extension Architecture Selection Framework (Core Plugin vs. MCP Server)
+### Principle 10: Extension Architecture Selection Framework (ClawHub Skills → Core Plugin → MCP)
 
-All new tools, integrations, and ClawHub skills MUST be evaluated against a strict architecture selection decision framework prior to design approval and implementation:
+All new tools, integrations, and Google Workspace capabilities MUST be evaluated against a strict, ordered architecture selection framework prior to design approval and implementation:
 
-1. **Core Native Plugins (`plugin_runner.py` / `tool_gateway.py`)**: MUST be reserved strictly for first-party, tightly coupled system features (e.g., internal health probes, sqlite storage, sub-millisecond in-process utilities) that require zero external dependency overhead.
-2. **Model Context Protocol (MCP) Servers**: MUST be used for all third-party integrations (e.g., Google Calendar, GitHub, Slack, databases), polyglot runtime modules (TypeScript, Go, Rust), or tools with complex external package dependencies. MCP servers MUST execute as isolated processes or sidecar containers communicating via standard JSON-RPC.
-3. **Architectural Justification**: Technical design documents (`plan.md`) MUST document the chosen integration strategy (Core Plugin vs. MCP Server) based on process isolation, dependency pollution risk, and cross-agent ecosystem compatibility.
+1. **ClawHub Skills (Preferred for Google Integrations)**: For any Google Workspace service (Gmail, Calendar, Drive, Docs, Sheets, Tasks, Contacts), the **ClawHub `gog` skill** MUST be evaluated first. ClawHub skills provide managed OAuth lifecycle, standardized invocation APIs, and zero custom subprocess code. Use ClawHub skills whenever a published skill covering the required capability exists.
+2. **Core Native Plugins (`plugin_runner.py` / `tool_gateway.py`)**: MUST be reserved strictly for first-party, tightly coupled system features (e.g., internal health probes, sqlite storage, sub-millisecond in-process utilities) that require zero external dependency overhead.
+3. **Model Context Protocol (MCP) Servers**: Reserved for non-Google third-party integrations (e.g., GitHub, Slack, databases) or polyglot runtime modules (TypeScript, Go, Rust) where no ClawHub skill equivalent exists. MCP servers MUST execute as isolated processes communicating via standard JSON-RPC. **MCP MUST NOT be used for Google Workspace integrations** — use the ClawHub `gog` skill instead.
+4. **Architectural Justification**: Technical design documents (`plan.md`) MUST document the chosen integration strategy and explicitly confirm that higher-priority options (ClawHub → Core Plugin → MCP) were evaluated before the selected approach.
 
-*Rationale: Standardizes extension design decisions, prevents dependency pollution in core application containers, guarantees process isolation for third-party tools, and maximizes portability across the broader AI ecosystem.*
+*Rationale: The ClawHub-first approach for Google integrations eliminates OAuth token management complexity, prevents credential leakage risks (no token.json in-repo), and removes brittle custom MCP subprocess bridge code. Standardizes extension design decisions and maximizes portability across the AI ecosystem.*
 
 ### Principle 11: Production-Grade Engineering & Prohibition of Unapproved Workarounds
 
