@@ -36,8 +36,11 @@ gcloud services enable \
   iamcredentials.googleapis.com \
   artifactregistry.googleapis.com \
   cloudresourcemanager.googleapis.com \
-  sts.googleapis.com
+  sts.googleapis.com \
+  iap.googleapis.com
 ```
+
+> `iap.googleapis.com` is required by the deploy workflow's container-redeploy step, which reaches the VM over an IAP tunnel (the instance has no public IP). The matching firewall rule for `35.235.240.0/20` on `tcp:22` is created by the VPC module.
 
 > **Google Workspace APIs** (Gmail, Calendar, Drive, etc.) are enabled separately as part of the ClawHub `gog` skill installation. See [Google Integration](#google-workspace-integration) below.
 
