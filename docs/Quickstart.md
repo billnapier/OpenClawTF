@@ -202,7 +202,11 @@ This is a manual, one-time step — the OAuth consent flow requires a real brows
    GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<passphrase> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
      gog auth doctor --check --no-input
    ```
-4. Set `GOG_ACCOUNT=you@example.com` as a deployment-level env var (Terraform, alongside the other channel config) so the daemon doesn't need `--account` on every call.
+4. Seed the account email as its own Secret Manager value (not passed via `docker run` — the container has no `-e` flags at all; it fetches everything from Secret Manager at boot, same as `GOG_KEYRING_PASSWORD`):
+   ```bash
+   echo -n "you@example.com" | gcloud secrets versions add gog-account --data-file=-
+   ```
+   `gog` itself reads the `GOG_ACCOUNT` env var natively once `entrypoint.sh` exports it, so no `--account` flag is needed per call.
 
 The container's `docker/entrypoint.sh` fetches `GOG_KEYRING_PASSWORD` from Secret Manager at startup (same pattern as `GEMINI_API_KEY`) and runs `gog auth doctor --check --no-input` as a startup sanity check, logging a warning (not crashing) on failure.
 
