@@ -24,12 +24,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # before trusting this pin blindly.
 ARG GOG_VERSION=v0.40.0
 RUN set -eo pipefail; \
-    curl -fsSL -o /tmp/gogcli.tar.gz "https://github.com/openclaw/gogcli/releases/download/${GOG_VERSION}/gogcli_${GOG_VERSION#v}_linux_amd64.tar.gz" && \
+    ASSET="gogcli_${GOG_VERSION#v}_linux_amd64.tar.gz"; \
+    curl -fsSL -o "/tmp/${ASSET}" "https://github.com/openclaw/gogcli/releases/download/${GOG_VERSION}/${ASSET}" && \
     curl -fsSL -o /tmp/checksums.txt "https://github.com/openclaw/gogcli/releases/download/${GOG_VERSION}/checksums.txt" && \
-    (cd /tmp && grep "gogcli_${GOG_VERSION#v}_linux_amd64.tar.gz" checksums.txt | sha256sum -c -) && \
-    tar -xzf /tmp/gogcli.tar.gz -C /tmp && \
+    (cd /tmp && grep "${ASSET}" checksums.txt | sha256sum -c -) && \
+    tar -xzf "/tmp/${ASSET}" -C /tmp && \
     install -m 0755 /tmp/gog /usr/local/bin/gog && \
-    rm -f /tmp/gogcli.tar.gz /tmp/checksums.txt /tmp/gog
+    rm -f "/tmp/${ASSET}" /tmp/checksums.txt /tmp/gog
 
 WORKDIR /app
 
