@@ -24,20 +24,19 @@ gcloud config set project <YOUR_GCP_PROJECT_ID>
 
 ---
 
-## 2. Manual Step 1: Enable Required GCP APIs
+## 2. Manual Step 1: Enable the Two Bootstrap GCP APIs
 
-Run the following command to enable all necessary Google Cloud API services:
+Terraform manages API enablement (`terraform/services.tf`), but it can't enable the two APIs it needs in order to enable anything else. Turn those on by hand once:
 
 ```bash
 gcloud services enable \
-  compute.googleapis.com \
-  secretmanager.googleapis.com \
-  iam.googleapis.com \
-  iamcredentials.googleapis.com \
-  artifactregistry.googleapis.com \
   cloudresourcemanager.googleapis.com \
-  sts.googleapis.com
+  serviceusage.googleapis.com
 ```
+
+Everything else — `compute`, `secretmanager`, `iam`, `iamcredentials`, `artifactregistry`, `sts`, `iap`, `logging`, `monitoring` — is declared in `terraform/services.tf` and enabled on the first `terraform apply`. Enabling an already-enabled API is a no-op, so projects that were set up manually before this was codified adopt cleanly with no import step.
+
+> `iap.googleapis.com` is what lets the deploy workflow's container-redeploy step reach the VM over an IAP tunnel (the instance has no public IP). The matching firewall rule for `35.235.240.0/20` on `tcp:22` is created by the VPC module.
 
 > **Google Workspace APIs** (Gmail, Calendar, Drive, etc.) are enabled separately as part of the ClawHub `gog` skill installation. See [Google Integration](#google-workspace-integration) below.
 

@@ -85,22 +85,42 @@ jobs:
           docker build -t "$IMAGE_URI" -f docker/Dockerfile .
           docker push "$IMAGE_URI"
 
-      - name: Refresh GCE Instance Container Metadata
+      # Re-runs the startup script defined in
+      # terraform/modules/compute/templates/startup-script.sh.tftpl, which does the
+      # docker pull + stop/rm + run. Keeping the redeploy logic there (rather than
+      # duplicating `docker run` here) means Terraform stays the single source of
+      # truth for how the container is launched.
+      #
+      # Instance name must match `instance_name` in
+      # terraform/modules/compute/variables.tf.
+      - name: Redeploy Container on GCE Instance
+        run: |
+          gcloud compute ssh openclaw-vm \
+            --zone=${{ vars.GCP_ZONE }} \
+            --project=${{ vars.GCP_PROJECT_ID }} \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo google_metadata_script_runner startup"
+
+      # Guards against the silent-staleness failure this step previously had: the
+      # old version targeted a nonexistent instance, wrote container-declaration
+      # metadata this VM does not read, and ended in `|| true` — so it reported
+      # success while the host kept running an image from days earlier.
+      - name: Verify Deployed Container Matches Pushed Image
         run: |
           IMAGE_URI="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/openclaw/app:latest"
-          gcloud compute instances add-metadata openclaw-instance \
+          EXPECTED_DIGEST="$(gcloud container images describe "$IMAGE_URI" --format='value(image_summary.digest)')"
+          RUNNING_DIGEST="$(gcloud compute ssh openclaw-vm \
             --zone=${{ vars.GCP_ZONE }} \
-            --metadata=gce-container-declaration="spec:
-            containers:
-              - name: openclaw-app
-                image: '$IMAGE_URI'
-                securityContext:
-                  privileged: false
-                volumeMounts:
-                  - mountPath: /mnt/disks/openclaw-data
-                    name: openclaw-data-volume
-            volumes:
-              - name: openclaw-data-volume
-                gcePersistentDisk:
-                  pdName: openclaw-data-disk
-                  fsType: ext4" || true
+            --project=${{ vars.GCP_PROJECT_ID }} \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo docker inspect --format='{{index .RepoDigests 0}}' openclaw-container" \
+            | tr -d '\r' | sed 's/.*@//')"
+          echo "Expected digest: $EXPECTED_DIGEST"
+          echo "Running digest:  $RUNNING_DIGEST"
+          if [ "$EXPECTED_DIGEST" != "$RUNNING_DIGEST" ]; then
+            echo "::error ::Deployed container does not match the image just pushed."
+            exit 1
+          fi
+          echo "Deployed container matches the pushed image."

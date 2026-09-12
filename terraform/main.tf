@@ -17,18 +17,24 @@ module "vpc" {
   source     = "./modules/vpc"
   project_id = var.project_id
   region     = var.region
+
+  depends_on = [google_project_service.required]
 }
 
 module "artifact_registry" {
   source     = "./modules/artifact_registry"
   project_id = var.project_id
   region     = var.region
+
+  depends_on = [google_project_service.required]
 }
 
 module "secrets" {
   source                = "./modules/secrets"
   project_id            = var.project_id
   service_account_email = local.sa_email
+
+  depends_on = [google_project_service.required]
 }
 
 module "storage" {
@@ -36,6 +42,8 @@ module "storage" {
   project_id = var.project_id
   region     = var.region
   zone       = var.zone
+
+  depends_on = [google_project_service.required]
 }
 
 module "compute" {
@@ -47,10 +55,12 @@ module "compute" {
   service_account_email = local.sa_email
   container_image       = local.image
 
-  depends_on = [module.storage]
+  depends_on = [module.storage, google_project_service.required]
 }
 
 module "monitoring" {
   source     = "./modules/monitoring"
   project_id = var.project_id
+
+  depends_on = [google_project_service.required]
 }
