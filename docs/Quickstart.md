@@ -36,15 +36,10 @@ gcloud services enable \
   iamcredentials.googleapis.com \
   artifactregistry.googleapis.com \
   cloudresourcemanager.googleapis.com \
-  sts.googleapis.com \
-  gmail.googleapis.com \
-  calendar-json.googleapis.com \
-  drive.googleapis.com \
-  docs.googleapis.com \
-  sheets.googleapis.com \
-  tasks.googleapis.com \
-  people.googleapis.com
+  sts.googleapis.com
 ```
+
+> **Google Workspace APIs** (Gmail, Calendar, Drive, etc.) are enabled separately as part of the ClawHub `gog` skill installation. See [Google Integration](#google-workspace-integration) below.
 
 ---
 
@@ -88,17 +83,7 @@ Specify a comma-separated list of numerical Telegram User IDs permitted to inter
 echo -n "123456789,987654321" | gcloud secrets create telegram-allowed-user-ids --data-file=-
 ```
 
-### D. Google Workspace MCP OAuth Credentials
-To enable the Google Workspace MCP Server (Gmail, Calendar, Drive, Docs, Sheets, Tasks, Contacts), generate OAuth 2.0 Client credentials in Google Cloud Console (`APIs & Services > Credentials`), download the JSON file, and seed it into Secret Manager:
-
-```bash
-gcloud secrets create google-workspace-credentials --data-file="/path/to/workspace-credentials.json"
-```
-
-Once seeded, OpenClaw automatically initializes the native Google Workspace MCP Server (`uvx --from google-workspace-mcp google-workspace-worker`) over stdio JSON-RPC per **Principle 10**.
-
 ---
-
 
 ## 5. Manual Step 4: Configure Workload Identity Federation (WIF) & GitHub Secrets
 
@@ -153,3 +138,32 @@ Once manual setup steps 1–4 are complete:
 1. Open a Pull Request on GitHub to trigger `terraform-plan.yml` (Guardian plan).
 2. Review the plan output posted automatically by the Guardian bot on your PR.
 3. Merge the PR into `main` to trigger `deploy.yml` (Guardian apply & image deployment).
+
+---
+
+## Google Workspace Integration
+
+OpenClaw integrates with Google Workspace (Gmail, Calendar, Drive, Tasks, etc.) via **ClawHub skills** using **`gog`** (Google on GitHub — the official Google OAuth CLI for Antigravity skills), rather than a custom MCP server.
+
+### Preferred Integration Approach (ClawHub + gog)
+
+Per **Constitution Principle 10**, all Google Workspace integrations MUST use the ClawHub skill ecosystem with `gog` for managed OAuth authentication. This eliminates the need to run a custom MCP subprocess and delegates credential management to the `gog` framework.
+
+**Installation Steps:**
+
+1. Install the ClawHub `gog` skill into your Antigravity workspace:
+   ```bash
+   # Install via ClawHub (exact command TBD once gog skill is published)
+   antigravity skill install clawhub/gog
+   ```
+
+2. Authenticate with your Google account via `gog`:
+   ```bash
+   gog auth login
+   ```
+
+3. The `gog` skill handles OAuth token refresh and expiry automatically — no manual `token.json` management required.
+
+4. Once authenticated, OpenClaw skills can invoke Google Workspace APIs through the `gog` framework via standard ClawHub skill calls.
+
+> **Note**: The `gog` ClawHub skill is the preferred replacement for the previous Google Workspace MCP server approach. Specification `025-google-workspace-clawhub` will define the full implementation plan once the `gog` skill is available from ClawHub.

@@ -1,5 +1,7 @@
 # Feature Specification: Google Workspace MCP Server Integration
 
+> ⚠️ **STATUS: ABANDONED** — This specification was attempted but abandoned due to persistent JSON-RPC protocol handshake failures between `google-workspace-mcp` and the Gemini Function Calling API. **Superseded by [Spec 025: Google Workspace ClawHub + gog](../025-google-workspace-clawhub/spec.md).**
+
 ## Feature Overview & Objectives
 The goal of this feature is to integrate Google Workspace capabilities (Gmail, Google Drive, Google Calendar, Google Docs, Google Sheets, Google Tasks, and Google Contacts) into OpenClaw as a dedicated Model Context Protocol (MCP) Server.
 
