@@ -49,6 +49,30 @@ if [ -z "$TELEGRAM_ALLOWED_USER_IDS" ]; then
   export TELEGRAM_ALLOWED_USER_IDS
 fi
 
+# --- Google Workspace (`gog`) configuration (Spec 025) ---
+# GOG_ACCOUNT is plain deployment config (not a secret), set by Terraform.
+export GOG_KEYRING_BACKEND="file"
+export GOG_HOME="${GOG_HOME:-/mnt/disks/openclaw-data/gogcli}"
+export GOG_ACCOUNT="${GOG_ACCOUNT:-}"
+
+if [ -z "$GOG_KEYRING_PASSWORD" ]; then
+  GOG_KEYRING_PASSWORD=$(fetch_secret "gog-keyring-password" || true)
+  export GOG_KEYRING_PASSWORD
+fi
+
+mkdir -p "$GOG_HOME"
+
+if command -v gog >/dev/null 2>&1; then
+  if ! gog auth doctor --check --no-input >/tmp/gog-auth-doctor.log 2>&1; then
+    echo "[ENTRYPOINT WARNING] 'gog auth doctor --check' failed — Google Workspace tools may be unavailable until re-authenticated. See docs/Quickstart.md." >&2
+    cat /tmp/gog-auth-doctor.log >&2 || true
+  else
+    echo "[ENTRYPOINT] gog auth doctor check passed."
+  fi
+else
+  echo "[ENTRYPOINT WARNING] 'gog' binary not found on PATH — Google Workspace tools will be unavailable." >&2
+fi
+
 # Ensure data directory exists on persistent disk mount
 DATA_DIR="${DATA_DIR:-/mnt/disks/openclaw-data}"
 mkdir -p "$DATA_DIR"

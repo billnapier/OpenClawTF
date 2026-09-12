@@ -15,6 +15,27 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 ALLOWED_USERS_RAW = os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "").strip()
 
+# --- Mutation Confirmation State (Spec 025, data-model.md) -----------------
+#
+# Ephemeral, in-memory, per-chat pending-confirmation state for mutating
+# Google Workspace tool calls (calendar_create_event, send_message,
+# tasks_add, tasks_complete). Keyed by Telegram chat_id. Not persisted —
+# restarting the daemon simply drops any pending confirmations, which is
+# fine since they're short-TTL and re-askable.
+PENDING_CONFIRMATIONS = {}
+PENDING_CONFIRMATION_TTL_SECONDS = 300
+
+_AFFIRMATIVE_WORDS = {"yes", "y", "yeah", "yep", "confirm", "confirmed", "ok", "okay", "go ahead", "do it", "proceed", "sure"}
+_NEGATIVE_WORDS = {"no", "n", "nope", "cancel", "cancelled", "canceled", "stop", "nevermind", "never mind"}
+
+
+def _is_affirmative(text):
+    return text.strip().lower() in _AFFIRMATIVE_WORDS
+
+
+def _is_negative(text):
+    return text.strip().lower() in _NEGATIVE_WORDS
+
 def parse_allowed_ids(raw):
     if not raw:
         return set()
@@ -64,13 +85,22 @@ def sanitize_schema(schema):
         clean['required'] = [r for r in clean['required'] if r in clean['properties']]
     return clean
 
-def query_gemini(prompt, session_id="default", history=None):
+def query_gemini(prompt, session_id="default", history=None, chat_id=None):
     """Channel-agnostic Gemini query helper with tool-call/turn-2 support.
 
     `history` is an optional list of prior `{"role": "user"|"agent", "text": ...}`
     turns to seed `contents` before the current prompt (used by the CLI chat
     channel for cross-turn/cross-invocation context; omitted/empty preserves
     Telegram's existing single-prompt behavior byte-for-byte).
+
+    `chat_id`, when provided (Telegram call site only), enables the
+    confirm-before-mutate round trip (Spec 025): if Gemini calls a mutating
+    Google Workspace function, the pending action is stashed in
+    `PENDING_CONFIRMATIONS[chat_id]` and a human-readable confirmation
+    question is returned instead of executing anything. Callers that omit
+    `chat_id` (e.g. the CLI chat channel) never see a mutating call actually
+    execute either — `call_mcp_tool` still returns `confirmation_required` —
+    they just get that fact surfaced as text rather than round-tripped.
     """
     api_key = os.environ.get("GEMINI_API_KEY", "").strip() or GEMINI_API_KEY
     if not api_key:
@@ -141,6 +171,22 @@ def query_gemini(prompt, session_id="default", history=None):
                     from tool_gateway import ToolGateway
                     gw = ToolGateway()
                     tool_res = gw.call_mcp_tool(fn_name, json.dumps(fn_args))
+
+                    # Confirm-before-mutate (Spec 025, research.md Decision 7):
+                    # a mutating call is never executed on this first pass —
+                    # stash it and ask the user, rather than synthesizing a
+                    # turn-2 response around output that doesn't exist yet.
+                    if tool_res.get("status") == "confirmation_required":
+                        summary = tool_res.get("summary", f"Execute {fn_name}?")
+                        if chat_id is not None:
+                            PENDING_CONFIRMATIONS[chat_id] = {
+                                "fn_name": fn_name,
+                                "args": tool_res.get("args", fn_args),
+                                "expires_at": time.time() + PENDING_CONFIRMATION_TTL_SECONDS,
+                            }
+                            return f"⚠️ {summary}\n\nReply *yes* to proceed or *no* to cancel."
+                        return f"⚠️ Confirmation required: {summary}"
+
                     output_val = tool_res.get("output", {})
 
                     # Turn 2: Provide tool execution output back to Gemini to synthesize
@@ -217,60 +263,60 @@ def process_update(update):
     print(f"[DAEMON AUTH] Processing message from authorized User ID {user_id}: {text}", flush=True)
 
     if text in ["/start", "/help"]:
-        send_telegram_message(chat_id, "🤖 OpenClaw Bot Active!\nSend any natural language query or use Workspace commands:\n/calendar - Agenda\n/gmail - Inbox search\n/drive - File search\n/status - System status")
+        send_telegram_message(
+            chat_id,
+            "🤖 OpenClaw Bot Active!\n"
+            "Just ask naturally — e.g. \"what's on my calendar today?\", "
+            "\"do I have unread email about the Q3 budget?\", or "
+            "\"add 'review PR #42' to my task list\".\n"
+            "Actions that change something (creating an event, sending mail, adding/completing "
+            "a task) will ask you to confirm before they happen.\n"
+            "/status - System status"
+        )
         return
     elif text == "/status":
-        send_telegram_message(chat_id, f"✅ OpenClaw Status: Online\nWhitelisted Users: {len(allowed_ids)}\nModel: gemini-3.6-flash\nWorkspace MCP Integration: Active")
-        return
-    elif text.startswith("/calendar"):
-        from tool_gateway import ToolGateway
-        gw = ToolGateway()
-        now = datetime.datetime.now(datetime.timezone.utc)
-        time_min = (now - datetime.timedelta(days=1)).isoformat()
-        time_max = (now + datetime.timedelta(days=7)).isoformat()
-        res = gw.call_mcp_tool("calendar_get_events", json.dumps({"time_min": time_min, "time_max": time_max}))
-        events = res.get("output", {}).get("events", [])
-        if events:
-            lines = ["📅 *Upcoming Calendar Events:*"]
-            for ev in events:
-                lines.append(f"• *{ev.get('summary')}* ({ev.get('start', {}).get('dateTime')} - {ev.get('end', {}).get('dateTime')})\n  {ev.get('location', '')}")
-            send_telegram_message(chat_id, "\n".join(lines))
-        else:
-            send_telegram_message(chat_id, "📅 No upcoming calendar events found for the next 7 days.")
-        return
-    elif text.startswith("/gmail"):
-        from tool_gateway import ToolGateway
-        gw = ToolGateway()
-        query = text[7:].strip() or "is:unread"
-        res = gw.call_mcp_tool("list_messages", json.dumps({"query": query}))
-        output = res.get("output", {})
-        msgs = output.get("messages", []) if isinstance(output, dict) else []
-        if msgs:
-            lines = [f"📧 *Gmail Search Results ('{query}'):*"]
-            for m in msgs:
-                lines.append(f"• *From:* {m.get('from')}\n  *Subject:* {m.get('subject')}\n  _{m.get('snippet')}_")
-            send_telegram_message(chat_id, "\n".join(lines))
-        else:
-            send_telegram_message(chat_id, f"📧 *Gmail MCP Integration Active:* Tool call executed for query '{query}'.")
-        return
-    elif text.startswith("/drive"):
-        from tool_gateway import ToolGateway
-        gw = ToolGateway()
-        query = text[6:].strip() or "OpenClaw"
-        res = gw.call_mcp_tool("search_drive_files", json.dumps({"query": query}))
-        output = res.get("output", {})
-        files = output.get("files", []) if isinstance(output, dict) else []
-        if files:
-            lines = [f"📁 *Drive Search Results ('{query}'):*"]
-            for f in files:
-                lines.append(f"• *{f.get('name')}* ({f.get('mimeType')})\n  Link: {f.get('webViewLink')}")
-            send_telegram_message(chat_id, "\n".join(lines))
-        else:
-            send_telegram_message(chat_id, f"📁 *Google Drive MCP Integration Active:* Tool call executed for query '{query}'.")
+        send_telegram_message(
+            chat_id,
+            f"✅ OpenClaw Status: Online\nWhitelisted Users: {len(allowed_ids)}\nModel: gemini-3.6-flash\n"
+            f"Google Workspace: via `gog` CLI (Gemini function-calling, natural language only)"
+        )
         return
 
-    # Native Function Calling Routing (No Keyword checks needed)
-    answer = query_gemini(text)
+    # Confirm-before-mutate round trip (Spec 025, research.md Decision 7 /
+    # data-model.md "Mutation Confirmation State"): if this chat has a live
+    # pending mutating action, this message is treated as the yes/no reply
+    # to it rather than a fresh query — natural-language routing below never
+    # sees it.
+    pending = PENDING_CONFIRMATIONS.get(chat_id)
+    if pending:
+        if pending["expires_at"] < time.time():
+            del PENDING_CONFIRMATIONS[chat_id]
+            pending = None
+    if pending:
+        if _is_affirmative(text):
+            del PENDING_CONFIRMATIONS[chat_id]
+            from tool_gateway import ToolGateway
+            gw = ToolGateway()
+            tool_res = gw.call_mcp_tool(pending["fn_name"], json.dumps(pending["args"]), confirmed=True)
+            status = tool_res.get("status")
+            if status == "success":
+                send_telegram_message(chat_id, f"✅ Done. {json.dumps(tool_res.get('output', {}))}")
+            else:
+                send_telegram_message(chat_id, f"⚠️ {tool_res.get('error', 'The action could not be completed.')}")
+            return
+        elif _is_negative(text):
+            del PENDING_CONFIRMATIONS[chat_id]
+            send_telegram_message(chat_id, "🚫 Cancelled — no action was taken.")
+            return
+        else:
+            # Not a recognizable yes/no reply: drop the stale pending action
+            # and fall through to treat this message as a brand-new query.
+            del PENDING_CONFIRMATIONS[chat_id]
+
+    # Natural-language-only routing: no hardcoded /calendar, /gmail, /drive
+    # commands. Gemini function-calling is the sole path to Google Workspace
+    # tools (explicit user requirement, Spec 025).
+    answer = query_gemini(text, chat_id=chat_id)
     send_telegram_message(chat_id, answer)
 
 def main():
