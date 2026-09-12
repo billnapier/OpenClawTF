@@ -56,8 +56,11 @@ seed_secret_payload() {
   echo "[SUCCESS] Secret '$secret_id' version seeded successfully."
 }
 
+GOOGLE_WORKSPACE_CREDENTIALS="${GOOGLE_WORKSPACE_CREDENTIALS:-}"
+
 seed_secret_payload "gemini-api-key" "$GEMINI_API_KEY"
 seed_secret_payload "telegram-bot-token" "$TELEGRAM_BOT_TOKEN"
 seed_secret_payload "telegram-allowed-user-ids" "$ALLOWED_USER_IDS"
+seed_secret_payload "google-workspace-credentials" "$GOOGLE_WORKSPACE_CREDENTIALS"
 
 echo "[SEED_SECRETS] Seeding completed."

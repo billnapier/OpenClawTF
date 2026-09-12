@@ -10,7 +10,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 echo "[TEST 1] Verifying ToolGateway MCP tool listing..."
 TOOLS_JSON=$(python3 "${SCRIPT_DIR}/tool_gateway.py" --tool list_mcp_tools)
-if echo "$TOOLS_JSON" | grep -q "calendar_list_events" && echo "$TOOLS_JSON" | grep -q "gmail_search"; then
+if echo "$TOOLS_JSON" | grep -q "calendar_get_events" || echo "$TOOLS_JSON" | grep -q "calendar_list_events"; then
   echo "✓ PASS: ToolGateway returns Workspace tool definitions."
 else
   echo "✗ FAIL: ToolGateway failed to list tools."
@@ -18,7 +18,7 @@ else
 fi
 
 echo "[TEST 2] Verifying ToolGateway MCP proxy execution..."
-TOOL_RES=$(python3 "${SCRIPT_DIR}/tool_gateway.py" --tool call_mcp_tool --arg1 calendar_list_events --arg2 "{}")
+TOOL_RES=$(python3 "${SCRIPT_DIR}/tool_gateway.py" --tool call_mcp_tool --arg1 calendar_get_events --arg2 '{"time_min":"2026-09-11T00:00:00Z","time_max":"2026-09-18T00:00:00Z"}')
 if echo "$TOOL_RES" | grep -q '"status": "success"'; then
   echo "✓ PASS: ToolGateway successfully dispatched MCP call over stdio."
 else
@@ -27,7 +27,7 @@ else
 fi
 
 echo "[TEST 3] Verifying Gmail & Drive tool execution via MCP..."
-GMAIL_RES=$(python3 "${SCRIPT_DIR}/tool_gateway.py" --tool call_mcp_tool --arg1 gmail_search --arg2 '{"query":"is:unread"}')
+GMAIL_RES=$(python3 "${SCRIPT_DIR}/tool_gateway.py" --tool call_mcp_tool --arg1 list_messages --arg2 '{"query":"is:unread"}')
 if echo "$GMAIL_RES" | grep -q '"status": "success"'; then
   echo "✓ PASS: Gmail search via MCP returned success status."
 else
