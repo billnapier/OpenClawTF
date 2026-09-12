@@ -23,9 +23,23 @@ def init_db(db_path=DB_PATH):
             session_id TEXT NOT NULL,
             text TEXT NOT NULL,
             embedding TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            role TEXT DEFAULT 'user'
         )
     """)
+    # Additive migration: existing DBs created before the `role` column existed
+    # won't have it yet — add it if missing (backward compatible, no data loss).
+    cur.execute("PRAGMA table_info(memories)")
+    existing_cols = {row[1] for row in cur.fetchall()}
+    if "role" not in existing_cols:
+        try:
+            cur.execute("ALTER TABLE memories ADD COLUMN role TEXT DEFAULT 'user'")
+        except sqlite3.OperationalError:
+            # Two concurrent callers (e.g. two `openclaw chat` processes) can both
+            # see "role" missing and both attempt the ALTER TABLE; the loser hits
+            # "duplicate column name" once the winner's DDL has committed. That's
+            # fine — the column already exists, so there's nothing left to do.
+            pass
     conn.commit()
     return conn
 
@@ -50,15 +64,33 @@ class VectorMemoryEngine:
         self.db_path = db_path
         self.conn = init_db(db_path)
 
-    def add_memory(self, text, session_id="default"):
+    def add_memory(self, text, session_id="default", role="user"):
         vec = simple_embed(text)
         cur = self.conn.cursor()
         cur.execute(
-            "INSERT INTO memories (session_id, text, embedding) VALUES (?, ?, ?)",
-            (session_id, text, json.dumps(vec))
+            "INSERT INTO memories (session_id, text, embedding, role) VALUES (?, ?, ?, ?)",
+            (session_id, text, json.dumps(vec), role)
         )
         self.conn.commit()
         return cur.lastrowid
+
+    def get_recent(self, session_id="default", limit=20):
+        """Return the last `limit` turns for session_id in chronological order
+        (oldest first), for linear conversation context — complements
+        search_memory()'s similarity-ranked retrieval, which is not sufficient
+        on its own for 'recall the last few turns' recall behavior."""
+        cur = self.conn.cursor()
+        cur.execute(
+            "SELECT id, text, role, created_at FROM memories WHERE session_id = ? "
+            "ORDER BY created_at DESC, id DESC LIMIT ?",
+            (session_id, limit)
+        )
+        rows = cur.fetchall()
+        rows.reverse()  # chronological oldest-first
+        return [
+            {"id": row_id, "text": text, "role": role, "created_at": created_at}
+            for row_id, text, role, created_at in rows
+        ]
 
     def search_memory(self, query, session_id="default", top_k=3):
         q_vec = simple_embed(query)
