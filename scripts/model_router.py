@@ -9,12 +9,12 @@ import json
 import argparse
 
 MODELS = {
-    "flash": "gemini-flash-latest",
-    "pro": "gemini-pro-latest"
+    "flash": "gemini-3.6-flash",
+    "pro": "gemini-3.1-pro-preview"
 }
 
-DEFAULT_MODEL = "gemini-flash-latest"
-FALLBACK_MODEL = "gemini-flash-latest"
+DEFAULT_MODEL = "gemini-3.6-flash"
+FALLBACK_MODEL = "gemini-3.6-flash"
 
 class ModelRouter:
     def __init__(self, session_store_path="/tmp/openclaw_session_model.json"):
