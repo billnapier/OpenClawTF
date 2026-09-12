@@ -38,6 +38,32 @@ def send_telegram_message(chat_id, text):
     except Exception as e:
         print(f"[DAEMON ERROR] Failed to send message to Telegram chat {chat_id}: {e}", flush=True)
 
+import datetime
+
+def sanitize_schema(schema):
+    if not isinstance(schema, dict):
+        return schema
+    clean = {}
+    for k, v in schema.items():
+        if k in ['title', 'additionalProperties', '$schema', 'default']:
+            continue
+        if k == 'anyOf' and isinstance(v, list) and len(v) > 0:
+            non_null = [item for item in v if item.get('type') != 'null']
+            if non_null:
+                return sanitize_schema(non_null[0])
+            continue
+        if isinstance(v, dict):
+            clean[k] = sanitize_schema(v)
+        elif isinstance(v, list):
+            clean[k] = [sanitize_schema(i) if isinstance(i, dict) else i for i in v]
+        else:
+            clean[k] = v
+    if 'type' in clean:
+        clean['type'] = clean['type'].upper()
+    if 'required' in clean and 'properties' in clean:
+        clean['required'] = [r for r in clean['required'] if r in clean['properties']]
+    return clean
+
 def query_gemini(prompt, session_id="default"):
     api_key = os.environ.get("GEMINI_API_KEY", "").strip() or GEMINI_API_KEY
     if not api_key:
@@ -48,61 +74,101 @@ def query_gemini(prompt, session_id="default"):
         model = router.get_model(session_id)
         mcp_tools = router.get_tools()
     except Exception:
-        model = "gemini-flash-latest"
+        model = "gemini-3.6-flash"
         mcp_tools = []
 
-    # Build Native Gemini Function Declarations from MCP tools
     tools_payload = []
     if mcp_tools:
         func_decls = []
         for t in mcp_tools:
+            schema = sanitize_schema(t.get("inputSchema", {}))
             func_decls.append({
                 "name": t.get("name"),
                 "description": t.get("description", ""),
-                "parameters": t.get("inputSchema", {"type": "OBJECT", "properties": {}})
+                "parameters": schema
             })
         tools_payload = [{"function_declarations": func_decls}]
 
+    now = datetime.datetime.now(datetime.timezone.utc)
+    today_iso = now.isoformat()
+
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    system_prompt = f"You are OpenClaw, an autonomous AI assistant. Today's date and time is {today_iso}. You have full access to Google Workspace tools (Gmail, Calendar, Drive, Docs, Sheets, Tasks, Contacts). Always use tools when needed to answer calendar, email, or drive queries. When executing calendar queries, calculate appropriate ISO timestamps for time_min and time_max."
+    
+    user_content = [{"parts": [{"text": prompt}]}]
     body = {
-        "system_instruction": {
-            "parts": [{"text": "You are OpenClaw, an autonomous AI assistant. You have full access to Google Workspace tools (Gmail, Calendar, Drive, Docs, Sheets, Tasks, Contacts). Call tools whenever needed to fulfill user requests."}]
-        },
-        "contents": [{"parts": [{"text": prompt}]}]
+        "system_instruction": {"parts": [{"text": system_prompt}]},
+        "contents": user_content
     }
     if tools_payload:
         body["tools"] = tools_payload
 
-    payload = json.dumps(body).encode('utf-8')
-    req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
     try:
+        payload = json.dumps(body).encode('utf-8')
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             candidates = data.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                
-                # Check for Function Calls from Gemini
-                for part in parts:
-                    if "functionCall" in part:
-                        fc = part["functionCall"]
-                        fn_name = fc.get("name")
-                        fn_args = fc.get("args", {})
-                        
-                        from tool_gateway import ToolGateway
-                        gw = ToolGateway()
-                        tool_res = gw.call_mcp_tool(fn_name, json.dumps(fn_args))
-                        
-                        # Return formatted tool output
-                        output = tool_res.get("output", {})
-                        output_str = json.dumps(output, indent=2) if isinstance(output, (dict, list)) else str(output)
-                        return f"🛠️ *Executed Tool ({fn_name}):*\n```json\n{output_str}\n```"
-                
-                text_parts = [p.get("text", "") for p in parts if "text" in p]
-                if text_parts:
-                    return "".join(text_parts).strip()
+            if not candidates:
+                return "No response generated by Gemini."
+
+            candidate = candidates[0]
+            parts = candidate.get("content", {}).get("parts", [])
+            
+            # Check for Function Calls from Gemini
+            for part in parts:
+                if "functionCall" in part:
+                    fc = part["functionCall"]
+                    fn_name = fc.get("name")
+                    fn_args = fc.get("args", {})
+
+                    if fn_name == "calendar_get_events" and "time_min" not in fn_args:
+                        fn_args["time_min"] = (now - datetime.timedelta(days=1)).isoformat()
+                        fn_args["time_max"] = (now + datetime.timedelta(days=7)).isoformat()
+
+                    from tool_gateway import ToolGateway
+                    gw = ToolGateway()
+                    tool_res = gw.call_mcp_tool(fn_name, json.dumps(fn_args))
+                    output_val = tool_res.get("output", {})
+
+                    # Turn 2: Provide tool execution output back to Gemini to synthesize response
+                    turn2_body = {
+                        "system_instruction": body["system_instruction"],
+                        "contents": [
+                            {"role": "user", "parts": [{"text": prompt}]},
+                            candidate.get("content", {}),
+                            {
+                                "role": "user",
+                                "parts": [{
+                                    "functionResponse": {
+                                        "name": fn_name,
+                                        "response": {"content": output_val}
+                                    }
+                                }]
+                            }
+                        ]
+                    }
+                    try:
+                        req2 = urllib.request.Request(url, data=json.dumps(turn2_body).encode('utf-8'), headers={"Content-Type": "application/json"})
+                        with urllib.request.urlopen(req2, timeout=30) as resp2:
+                            data2 = json.loads(resp2.read().decode('utf-8'))
+                            final_parts = data2.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                            final_text = "".join([p.get("text", "") for p in final_parts if "text" in p]).strip()
+                            if final_text:
+                                return final_text
+                    except Exception as turn2_err:
+                        print(f"[DAEMON TURN2 ERROR] {turn2_err}", flush=True)
+
+                    # Fallback to direct output string if turn 2 fails
+                    output_str = json.dumps(output_val, indent=2) if isinstance(output_val, (dict, list)) else str(output_val)
+                    return f"🛠️ *Executed Tool ({fn_name}):*\n```json\n{output_str}\n```"
+
+            text_parts = [p.get("text", "") for p in parts if "text" in p]
+            if text_parts:
+                return "".join(text_parts).strip()
             return "No response generated by Gemini."
     except Exception as e:
+        print(f"[DAEMON GEMINI ERROR] {e}", flush=True)
         return f"Gemini API Error: {e}"
 
 def process_update(update):
@@ -131,26 +197,29 @@ def process_update(update):
         send_telegram_message(chat_id, "🤖 OpenClaw Bot Active!\nSend any natural language query or use Workspace commands:\n/calendar - Agenda\n/gmail - Inbox search\n/drive - File search\n/status - System status")
         return
     elif text == "/status":
-        send_telegram_message(chat_id, f"✅ OpenClaw Status: Online\nWhitelisted Users: {len(allowed_ids)}\nModel: gemini-flash-latest\nWorkspace MCP Integration: Active")
+        send_telegram_message(chat_id, f"✅ OpenClaw Status: Online\nWhitelisted Users: {len(allowed_ids)}\nModel: gemini-3.6-flash\nWorkspace MCP Integration: Active")
         return
     elif text.startswith("/calendar"):
         from tool_gateway import ToolGateway
         gw = ToolGateway()
-        res = gw.call_mcp_tool("calendar_list_events")
+        now = datetime.datetime.now(datetime.timezone.utc)
+        time_min = (now - datetime.timedelta(days=1)).isoformat()
+        time_max = (now + datetime.timedelta(days=7)).isoformat()
+        res = gw.call_mcp_tool("calendar_get_events", json.dumps({"time_min": time_min, "time_max": time_max}))
         events = res.get("output", {}).get("events", [])
         if events:
             lines = ["📅 *Upcoming Calendar Events:*"]
             for ev in events:
-                lines.append(f"• *{ev.get('summary')}* ({ev.get('start')} - {ev.get('end')})\n  {ev.get('location', '')}")
+                lines.append(f"• *{ev.get('summary')}* ({ev.get('start', {}).get('dateTime')} - {ev.get('end', {}).get('dateTime')})\n  {ev.get('location', '')}")
             send_telegram_message(chat_id, "\n".join(lines))
         else:
-            send_telegram_message(chat_id, "📅 *Google Calendar MCP:* Direct tool execution active.")
+            send_telegram_message(chat_id, "📅 No upcoming calendar events found for the next 7 days.")
         return
     elif text.startswith("/gmail"):
         from tool_gateway import ToolGateway
         gw = ToolGateway()
         query = text[7:].strip() or "is:unread"
-        res = gw.call_mcp_tool("gmail_search", json.dumps({"query": query}))
+        res = gw.call_mcp_tool("list_messages", json.dumps({"query": query}))
         output = res.get("output", {})
         msgs = output.get("messages", []) if isinstance(output, dict) else []
         if msgs:
@@ -165,7 +234,7 @@ def process_update(update):
         from tool_gateway import ToolGateway
         gw = ToolGateway()
         query = text[6:].strip() or "OpenClaw"
-        res = gw.call_mcp_tool("drive_search_files", json.dumps({"query": query}))
+        res = gw.call_mcp_tool("search_drive_files", json.dumps({"query": query}))
         output = res.get("output", {})
         files = output.get("files", []) if isinstance(output, dict) else []
         if files:
