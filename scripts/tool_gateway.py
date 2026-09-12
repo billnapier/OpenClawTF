@@ -70,22 +70,57 @@ class ToolGateway:
         uvx_bin = os.path.expanduser("~/.local/bin/uvx")
         cmd = [uvx_bin, "--from", "google-workspace-mcp", "google-workspace-worker"] if os.path.exists(uvx_bin) else ["uvx", "--from", "google-workspace-mcp", "google-workspace-worker"]
         
-        rpc_str = json.dumps(payload_dict) + "\n"
+        env = os.environ.copy()
+        
+        # Load from token.json or /mnt/disks/openclaw-data/token.json if available
+        possible_token_paths = ["token.json", "/mnt/disks/openclaw-data/token.json"]
+        for tp in possible_token_paths:
+            if os.path.exists(tp) and not env.get("GOOGLE_WORKSPACE_REFRESH_TOKEN"):
+                try:
+                    with open(tp, "r") as f:
+                        tdata = json.load(f)
+                        if isinstance(tdata, dict):
+                            env["GOOGLE_WORKSPACE_CLIENT_ID"] = tdata.get("client_id", env.get("GOOGLE_WORKSPACE_CLIENT_ID", ""))
+                            env["GOOGLE_WORKSPACE_CLIENT_SECRET"] = tdata.get("client_secret", env.get("GOOGLE_WORKSPACE_CLIENT_SECRET", ""))
+                            env["GOOGLE_WORKSPACE_REFRESH_TOKEN"] = tdata.get("refresh_token", env.get("GOOGLE_WORKSPACE_REFRESH_TOKEN", ""))
+                except Exception:
+                    pass
+
+        if "GOOGLE_WORKSPACE_CREDENTIALS" in env and not env.get("GOOGLE_WORKSPACE_REFRESH_TOKEN"):
+            try:
+                creds_obj = json.loads(env["GOOGLE_WORKSPACE_CREDENTIALS"])
+                if isinstance(creds_obj, dict):
+                    env["GOOGLE_WORKSPACE_CLIENT_ID"] = creds_obj.get("client_id", env.get("GOOGLE_WORKSPACE_CLIENT_ID", ""))
+                    env["GOOGLE_WORKSPACE_CLIENT_SECRET"] = creds_obj.get("client_secret", env.get("GOOGLE_WORKSPACE_CLIENT_SECRET", ""))
+                    env["GOOGLE_WORKSPACE_REFRESH_TOKEN"] = creds_obj.get("refresh_token", env.get("GOOGLE_WORKSPACE_REFRESH_TOKEN", ""))
+            except Exception:
+                pass
+
+        # Build full MCP 2024-11-05 standard initialization handshake
+        init_req = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "openclaw", "version": "1.0.0"}}}) + "\n"
+        init_notif = json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
+        target_payload = json.dumps({"jsonrpc": "2.0", "id": 2, "method": payload_dict["method"], "params": payload_dict.get("params", {})}) + "\n"
+
+        full_input = init_req + init_notif + target_payload
+
         try:
             res = subprocess.run(
                 cmd,
-                input=rpc_str,
+                input=full_input,
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
+                env=env
             )
-            if res.returncode == 0 and res.stdout.strip():
-                # Parse stdout lines for valid JSON-RPC response
+            if res.stdout and res.stdout.strip():
+                # Parse stdout lines for the target response (id: 2)
                 for line in res.stdout.strip().split("\n"):
                     line_s = line.strip()
                     if line_s.startswith("{") and line_s.endswith("}"):
                         try:
-                            return json.loads(line_s)
+                            parsed = json.loads(line_s)
+                            if parsed.get("id") == 2:
+                                return parsed
                         except Exception:
                             continue
             return None
