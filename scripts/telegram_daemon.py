@@ -64,7 +64,14 @@ def sanitize_schema(schema):
         clean['required'] = [r for r in clean['required'] if r in clean['properties']]
     return clean
 
-def query_gemini(prompt, session_id="default"):
+def query_gemini(prompt, session_id="default", history=None):
+    """Channel-agnostic Gemini query helper with tool-call/turn-2 support.
+
+    `history` is an optional list of prior `{"role": "user"|"agent", "text": ...}`
+    turns to seed `contents` before the current prompt (used by the CLI chat
+    channel for cross-turn/cross-invocation context; omitted/empty preserves
+    Telegram's existing single-prompt behavior byte-for-byte).
+    """
     api_key = os.environ.get("GEMINI_API_KEY", "").strip() or GEMINI_API_KEY
     if not api_key:
         return "Error: GEMINI_API_KEY is not configured on OpenClaw server."
@@ -94,8 +101,13 @@ def query_gemini(prompt, session_id="default"):
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     system_prompt = f"You are OpenClaw, an autonomous AI assistant. Today's date and time is {today_iso}. You have full access to Google Workspace tools (Gmail, Calendar, Drive, Docs, Sheets, Tasks, Contacts). Always use tools when needed to answer calendar, email, or drive queries. When executing calendar queries, calculate appropriate ISO timestamps for time_min and time_max."
-    
-    user_content = [{"parts": [{"text": prompt}]}]
+
+    user_content = []
+    if history:
+        for turn in history:
+            role = "model" if turn.get("role") == "agent" else "user"
+            user_content.append({"role": role, "parts": [{"text": turn.get("text", "")}]})
+    user_content.append({"parts": [{"text": prompt}]})
     body = {
         "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": user_content
@@ -131,22 +143,33 @@ def query_gemini(prompt, session_id="default"):
                     tool_res = gw.call_mcp_tool(fn_name, json.dumps(fn_args))
                     output_val = tool_res.get("output", {})
 
-                    # Turn 2: Provide tool execution output back to Gemini to synthesize response
+                    # Turn 2: Provide tool execution output back to Gemini to synthesize
+                    # response. Seed `history` here the same way turn 1 does (line
+                    # 105-110 above) so tool-invoking turns don't lose prior
+                    # conversation context. `history` defaults to None/empty for
+                    # Telegram's existing call site, so this is a no-op there and
+                    # preserves its behavior byte-for-byte.
+                    turn2_contents = []
+                    if history:
+                        for turn in history:
+                            role = "model" if turn.get("role") == "agent" else "user"
+                            turn2_contents.append({"role": role, "parts": [{"text": turn.get("text", "")}]})
+                    turn2_contents += [
+                        {"role": "user", "parts": [{"text": prompt}]},
+                        candidate.get("content", {}),
+                        {
+                            "role": "user",
+                            "parts": [{
+                                "functionResponse": {
+                                    "name": fn_name,
+                                    "response": {"content": output_val}
+                                }
+                            }]
+                        }
+                    ]
                     turn2_body = {
                         "system_instruction": body["system_instruction"],
-                        "contents": [
-                            {"role": "user", "parts": [{"text": prompt}]},
-                            candidate.get("content", {}),
-                            {
-                                "role": "user",
-                                "parts": [{
-                                    "functionResponse": {
-                                        "name": fn_name,
-                                        "response": {"content": output_val}
-                                    }
-                                }]
-                            }
-                        ]
+                        "contents": turn2_contents
                     }
                     try:
                         req2 = urllib.request.Request(url, data=json.dumps(turn2_body).encode('utf-8'), headers={"Content-Type": "application/json"})

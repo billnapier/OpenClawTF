@@ -141,6 +141,43 @@ Once manual setup steps 1–4 are complete:
 
 ---
 
+## 7a. CLI Chat Interface
+
+Once OpenClaw is deployed, an operator with an authenticated SSH session on the host can converse with the agent directly from the terminal via the `openclaw chat` subcommand — no separate CLI login or credential is required.
+
+**One-shot usage:**
+
+```bash
+openclaw chat "What's on my calendar today?"
+```
+
+Prints the agent's response and exits. The message and response are persisted to the same continuing CLI conversation thread that interactive sessions read/write.
+
+**Interactive usage (REPL):**
+
+```bash
+openclaw chat
+```
+
+Opens a prompt loop that carries context across turns. Exit with any of:
+- `/exit` or `/quit` (typed command)
+- Ctrl-D (EOF)
+- Ctrl-C (SIGINT)
+
+All three terminate cleanly with no orphaned processes. There is no idle timeout.
+
+**Authorization model:** the CLI channel's sole authorization boundary is an authenticated SSH session on the host itself — the same boundary already governing shell access. No separate CLI-specific credential, whitelist, or network-reachable entry point is introduced; the OS user is recorded only as an audit label.
+
+**Built-in help:**
+
+```bash
+openclaw chat --help
+```
+
+See `specs/026-cli-chat-interface/quickstart.md` for full usage detail, verification steps, and notes on channel isolation (CLI and Telegram conversations are independent threads).
+
+---
+
 ## Google Workspace Integration
 
 OpenClaw integrates with Google Workspace (Gmail, Calendar, Drive, Tasks, etc.) via **ClawHub skills** using **`gog`** (Google on GitHub — the official Google OAuth CLI for Antigravity skills), rather than a custom MCP server.
