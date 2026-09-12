@@ -26,17 +26,17 @@ Interactively ask the user for required credentials one at a time:
 2. **Telegram Bot Token** (from [@BotFather](https://t.me/BotFather)).
 3. **Allowed Telegram User IDs** (comma-separated, obtained via [@userinfobot](https://t.me/userinfobot)).
 
-> **Google Workspace**: Gmail, Calendar, Drive, and Tasks integration uses the **ClawHub `gog` skill** — NOT GCP Secret Manager credentials. Ask the user if they want to set up Google Workspace access, and if so, guide them to run `gog auth login` after bootstrap completes (Spec 025).
+> **Google Workspace**: Gmail, Calendar, Drive, and Tasks integration uses the **`gog` CLI** (`github.com/openclaw/gogcli`), invoked as a subprocess by `tool_gateway.py` — not a custom MCP server. Ask the user if they want to set up Google Workspace access, and if so, ensure the `gog-keyring-password` secret exists (`openssl rand -base64 32 | gcloud secrets create gog-keyring-password --data-file=-` if not), then walk them through the one-time OAuth grant after bootstrap completes: `GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<passphrase> GOG_HOME=/mnt/disks/openclaw-data/gogcli gog auth credentials <client_secret.json>`, then `... gog auth add <email> --services gmail,calendar,drive,tasks,contacts`, then verify with `... gog auth doctor --check --no-input` (Spec 025; see `docs/Quickstart.md`'s Google Workspace Integration section for the full flow).
 
 ### Step 3: GCP Infrastructure & WIF Actuation
 Run `gcloud` commands to:
 1. Enable GCP APIs: `compute`, `secretmanager`, `iam`, `iamcredentials`, `artifactregistry`, `cloudresourcemanager`, `sts`.
 2. Create GCS remote state bucket `gs://<project_id>-tfstate` with uniform bucket-level access.
-3. Seed secrets in GCP Secret Manager (`gemini-api-key`, `telegram-bot-token`, `telegram-allowed-user-ids`).
+3. Seed secrets in GCP Secret Manager (`gemini-api-key`, `telegram-bot-token`, `telegram-allowed-user-ids`, `gog-keyring-password` if Google Workspace access was requested in Step 2).
 4. Provision deployment Service Account `terraform-deployer` and assign `roles/owner` or required deployment roles.
 5. Create Workload Identity Pool `github-pool` and Provider `github-provider` mapping repository claims.
 
-> **Note**: Google Workspace APIs (`gmail`, `calendar-json`, `drive`, etc.) are NOT enabled here. They are managed by the ClawHub `gog` skill when the user runs `gog auth login` (Spec 025).
+> **Note**: Google Workspace APIs (`gmail`, `calendar-json`, `drive`, etc.) are NOT enabled here. They're authorized via the one-time `gog auth credentials` / `gog auth add` OAuth grant described in Step 2 above (Spec 025), not a GCP API-enablement step.
 
 ### Step 4: GitHub Secrets & Variables Configuration
 Run `gh` CLI commands to set:

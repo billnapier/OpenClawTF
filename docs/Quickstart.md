@@ -180,27 +180,30 @@ See `specs/026-cli-chat-interface/quickstart.md` for full usage detail, verifica
 
 ## Google Workspace Integration
 
-OpenClaw integrates with Google Workspace (Gmail, Calendar, Drive, Tasks, etc.) via **ClawHub skills** using **`gog`** (Google on GitHub — the official Google OAuth CLI for Antigravity skills), rather than a custom MCP server.
+OpenClaw integrates with Google Workspace (Gmail, Calendar, Drive, Tasks) via the ClawHub `gog` CLI (`github.com/openclaw/gogcli`), invoked as a normal subprocess from `scripts/tool_gateway.py` — no custom MCP server. Ask the bot naturally ("what's on my calendar today?"); Gemini function-calling routes the request to `gog`. Mutating actions (creating events, sending mail, adding/completing tasks) always pause for an explicit confirmation reply before executing.
 
-### Preferred Integration Approach (ClawHub + gog)
+### One-time setup (per Constitution Principle 7)
 
-Per **Constitution Principle 10**, all Google Workspace integrations MUST use the ClawHub skill ecosystem with `gog` for managed OAuth authentication. This eliminates the need to run a custom MCP subprocess and delegates credential management to the `gog` framework.
+This is a manual, one-time step — the OAuth consent flow requires a real browser and cannot run headlessly or in CI. See `specs/025-google-workspace-clawhub/quickstart.md` for full detail; summary:
 
-**Installation Steps:**
-
-1. Install the ClawHub `gog` skill into your Antigravity workspace:
+1. Generate a keyring passphrase and store it in Secret Manager (the encrypted token file's passphrase, not the OAuth token itself — Principle 3):
    ```bash
-   # Install via ClawHub (exact command TBD once gog skill is published)
-   antigravity skill install clawhub/gog
+   openssl rand -base64 32 | gcloud secrets create gog-keyring-password --data-file=-
    ```
-
-2. Authenticate with your Google account via `gog`:
+2. On a machine with a browser, load your GCP OAuth client and grant access:
    ```bash
-   gog auth login
+   GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<passphrase> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
+     gog auth credentials /path/to/client_secret.json
+   GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<passphrase> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
+     gog auth add you@example.com --services gmail,calendar,drive,tasks,contacts
    ```
+3. Verify:
+   ```bash
+   GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<passphrase> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
+     gog auth doctor --check --no-input
+   ```
+4. Set `GOG_ACCOUNT=you@example.com` as a deployment-level env var (Terraform, alongside the other channel config) so the daemon doesn't need `--account` on every call.
 
-3. The `gog` skill handles OAuth token refresh and expiry automatically — no manual `token.json` management required.
+The container's `docker/entrypoint.sh` fetches `GOG_KEYRING_PASSWORD` from Secret Manager at startup (same pattern as `GEMINI_API_KEY`) and runs `gog auth doctor --check --no-input` as a startup sanity check, logging a warning (not crashing) on failure.
 
-4. Once authenticated, OpenClaw skills can invoke Google Workspace APIs through the `gog` framework via standard ClawHub skill calls.
-
-> **Note**: The `gog` ClawHub skill is the preferred replacement for the previous Google Workspace MCP server approach. Specification `025-google-workspace-clawhub` will define the full implementation plan once the `gog` skill is available from ClawHub.
+> **Note**: the `gog` binary is pinned and installed at image build time in `docker/Dockerfile` (not a runtime download). Its exact version/flags were verified via `github.com/openclaw/gogcli` docs research at implementation time (no live binary available in that environment) — see `specs/025-google-workspace-clawhub/research.md` Decision 8 for what to re-check against a real deployment.
