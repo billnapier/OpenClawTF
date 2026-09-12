@@ -5,6 +5,7 @@ locals {
     "telegram-allowed-user-ids"   = "${var.secret_prefix}telegram-allowed-user-ids"
     "google-calendar-credentials" = "${var.secret_prefix}google-calendar-credentials"
     "gog-keyring-password"        = "${var.secret_prefix}gog-keyring-password"
+    "gog-account"                 = "${var.secret_prefix}gog-account"
 
   }
 }

@@ -23,7 +23,11 @@
    GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<...> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
      gog auth doctor --check --no-input
    ```
-4. Set `GOG_ACCOUNT=you@example.com` as a deployment-level env var (Terraform, alongside the other channel config) so the daemon doesn't need `--account` on every call.
+4. Seed the account email as its own Secret Manager secret (`gog-account`) — the container receives no `docker run -e` flags at all; every value here, sensitive or not, is fetched from Secret Manager by `entrypoint.sh` at boot:
+   ```bash
+   echo -n "you@example.com" | gcloud secrets versions add gog-account --data-file=-
+   ```
+   `gog` reads `GOG_ACCOUNT` natively once exported, so no `--account` flag is needed per call.
 
 ## Usage (once deployed)
 

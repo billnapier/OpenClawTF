@@ -50,14 +50,20 @@ if [ -z "$TELEGRAM_ALLOWED_USER_IDS" ]; then
 fi
 
 # --- Google Workspace (`gog`) configuration (Spec 025) ---
-# GOG_ACCOUNT is plain deployment config (not a secret), set by Terraform.
 export GOG_KEYRING_BACKEND="file"
 export GOG_HOME="${GOG_HOME:-/mnt/disks/openclaw-data/gogcli}"
-export GOG_ACCOUNT="${GOG_ACCOUNT:-}"
 
 if [ -z "$GOG_KEYRING_PASSWORD" ]; then
   GOG_KEYRING_PASSWORD=$(fetch_secret "gog-keyring-password" || true)
   export GOG_KEYRING_PASSWORD
+fi
+
+# GOG_ACCOUNT isn't sensitive, but Secret Manager is the only config-delivery
+# path this container has (docker run passes no -e flags at all), so it's
+# fetched the same way as every other value here.
+if [ -z "$GOG_ACCOUNT" ]; then
+  GOG_ACCOUNT=$(fetch_secret "gog-account" || true)
+  export GOG_ACCOUNT
 fi
 
 mkdir -p "$GOG_HOME"

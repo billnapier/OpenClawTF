@@ -53,7 +53,7 @@ Ephemeral, in-memory, per-conversation-turn state (not persisted) needed to impl
 
 | Variable | Source | Purpose |
 |---|---|---|
-| `GOG_ACCOUNT` | Set in `docker/entrypoint.sh` from a Terraform-declared value | Default Google account for all `gog` invocations |
+| `GOG_ACCOUNT` | Fetched from GCP Secret Manager (`gog-account`) at container startup — corrected post-deploy; not sensitive, but Secret Manager is the only config-delivery path this container has (`docker run` passes no `-e` flags at all) | Default Google account for all `gog` invocations |
 | `GOG_HOME` | `/mnt/disks/openclaw-data/gogcli` (persistent disk) | Where `gog` stores its encrypted token state |
 | `GOG_KEYRING_BACKEND` | `file` | Forces the file backend over the unavailable platform keyring |
 | `GOG_KEYRING_PASSWORD` | Fetched from GCP Secret Manager (`gog-keyring-password`) at container startup | Decrypts the token file; see research.md Decision 4 |
