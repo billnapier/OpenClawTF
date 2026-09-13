@@ -110,12 +110,15 @@ jobs:
         run: |
           IMAGE_URI="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/openclaw/app:latest"
           EXPECTED_DIGEST="$(gcloud container images describe "$IMAGE_URI" --format='value(image_summary.digest)')"
+          # RepoDigests lives on the image object, not the container, so resolve
+          # the container's image ID first and inspect that. The `\$` escapes
+          # keep the substitution on the remote host rather than the runner.
           RUNNING_DIGEST="$(gcloud compute ssh openclaw-vm \
             --zone=${{ vars.GCP_ZONE }} \
             --project=${{ vars.GCP_PROJECT_ID }} \
             --tunnel-through-iap \
             --quiet \
-            --command="sudo docker inspect --format='{{index .RepoDigests 0}}' openclaw-container" \
+            --command="IMG=\$(sudo docker inspect --format='{{.Image}}' openclaw-container); sudo docker inspect --format='{{index .RepoDigests 0}}' \$IMG" \
             | tr -d '\r' | sed 's/.*@//')"
           echo "Expected digest: $EXPECTED_DIGEST"
           echo "Running digest:  $RUNNING_DIGEST"

@@ -11,13 +11,19 @@
    ```bash
    openssl rand -base64 32 | gcloud secrets create gog-keyring-password --data-file=-
    ```
-2. On a machine with a browser (this step cannot run headlessly — it's a real Google OAuth consent flow):
+2. Run the grant inside the container on the host (that's where `gog` and `GOG_HOME` are; `entrypoint.sh` already exports the keyring vars, so they don't need repeating). The host is headless, so use the two-step `--remote` flow — the default flow tries to open a browser and fails:
    ```bash
-   GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<the passphrase from step 1> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
-     gog auth credentials /path/to/client_secret.json
-   GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<...> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
-     gog auth add you@example.com --services gmail,calendar,drive,tasks,contacts
+   gcloud compute scp client_secret.json openclaw-vm:/tmp/ --zone <zone> --tunnel-through-iap
+   gcloud compute ssh openclaw-vm --zone <zone> --tunnel-through-iap
+   sudo docker exec -it openclaw-container bash
+
+   gog auth credentials set /tmp/client_secret.json
+   gog auth add you@example.com --services gmail,calendar,drive,tasks,contacts --remote --step 1
+   # approve the printed URL in any browser, then paste the (failing) redirect URL back:
+   gog auth add you@example.com --services gmail,calendar,drive,tasks,contacts --remote --step 2 --auth-url "<redirect URL>"
    ```
+
+   > Verified against `gog v0.40.0` on the deployed host. Earlier revisions of this file documented `gog auth credentials <file>` and a single-shot `gog auth add` from web research — neither matches the real binary: `credentials` takes a `set` subcommand, and a headless host needs `--remote --step 1`/`--step 2`.
 3. Verify:
    ```bash
    GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<...> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
