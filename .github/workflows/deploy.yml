@@ -5,8 +5,13 @@ on:
     branches:
       - main
     paths:
+      # Must cover everything baked into the image. docker/Dockerfile does
+      # `COPY scripts /app/scripts`, so application changes under scripts/ are
+      # deploy-relevant; omitting them meant a code-only change triggered no
+      # run at all - not a red build, just silence - and quietly never shipped.
       - "terraform/**"
       - "docker/**"
+      - "scripts/**"
       - ".github/workflows/**"
   workflow_dispatch:
 
