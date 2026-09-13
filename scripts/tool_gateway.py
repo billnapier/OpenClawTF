@@ -35,26 +35,43 @@ MAX_OUTPUT_BYTES = 2048
 GOG_BINARY = os.environ.get("GOG_BINARY", "gog")
 GOG_TIMEOUT_SECONDS = 30
 
-# Exit-code -> status taxonomy (research.md Decision 9, confirmed against
-# https://gogcli.sh/automation.html during T001's docs-research pass).
+# Exit-code -> status taxonomy, taken from `gog schema --json` on the pinned
+# binary (automation.exit_codes). This supersedes an earlier partial mapping
+# derived from https://gogcli.sh/automation.html, which omitted 1, 3, 10, 11
+# and 130 - so those all fell through to a generic "error".
+#
+# Code 3 (empty_results) is the consequential one: a search that matched
+# nothing is a *successful* call, and reporting it as a failure turned "you
+# have no email today" into an error message.
 GOG_EXIT_STATUS = {
-    0: "success",
-    2: "error",            # invalid arguments
+    0: "success",          # ok
+    1: "error",            # generic error
+    2: "error",            # usage / invalid arguments
+    3: "success",          # empty_results - call succeeded, nothing matched
     4: "auth_required",
     5: "error",            # not found
     6: "error",            # permission denied
     7: "error",            # rate limited (bounded retry first)
-    8: "error",            # transient failure (bounded retry first)
+    8: "error",            # retryable transient failure (bounded retry first)
+    10: "error",           # config
+    11: "error",           # orphaned
+    130: "error",          # cancelled
 }
 GOG_EXIT_MESSAGES = {
+    1: "The Google Workspace tool call failed.",
     2: "Invalid arguments were passed to the Google Workspace tool.",
     4: "Google Workspace authentication is missing or expired. Please re-authenticate (see docs/Quickstart.md).",
     5: "The requested Google Workspace resource was not found.",
     6: "Permission denied for this Google Workspace action.",
     7: "Google Workspace API rate limit reached; please retry shortly.",
     8: "A transient failure occurred talking to Google Workspace; please retry.",
+    10: "The Google Workspace tool is misconfigured on this host.",
+    11: "The Google Workspace credential is orphaned; please re-authenticate (see docs/Quickstart.md).",
+    130: "The Google Workspace tool call was cancelled.",
 }
 GOG_RETRYABLE_EXIT_CODES = {7, 8}
+# Exit codes that carry a usable result on stdout rather than a failure.
+GOG_RESULT_EXIT_CODES = {0, 3}
 
 # Mutating functions require an explicit user confirmation before they are
 # actually executed (research.md Decision 7 / data-model.md "Mutation
@@ -301,12 +318,12 @@ class ToolGateway:
             last_exit_code = proc.returncode
             last_stdout = proc.stdout or ""
 
-            if last_exit_code == 0:
+            if last_exit_code in GOG_RESULT_EXIT_CODES:
                 try:
                     parsed = json.loads(last_stdout) if last_stdout.strip() else {}
                 except (ValueError, json.JSONDecodeError):
                     parsed = last_stdout
-                return {"status": "success", "output": parsed, "exit_code": 0}
+                return {"status": "success", "output": parsed, "exit_code": last_exit_code}
 
             if last_exit_code in GOG_RETRYABLE_EXIT_CODES and attempts < 2:
                 # Single bounded retry for rate-limited/transient failures.
