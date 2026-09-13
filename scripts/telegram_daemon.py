@@ -45,19 +45,57 @@ def get_allowed_user_ids():
     raw = os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "").strip()
     return parse_allowed_ids(raw)
 
+# Telegram rejects sendMessage payloads over 4096 characters outright, so a
+# long answer is lost entirely rather than truncated. Split below that with
+# headroom and prefer a line, then word, boundary.
+TELEGRAM_TEXT_LIMIT = 4000
+
+
+def split_for_telegram(text, limit=TELEGRAM_TEXT_LIMIT):
+    chunks = []
+    remaining = text
+    while len(remaining) > limit:
+        cut = remaining.rfind("\n", 0, limit)
+        if cut < limit // 2:
+            cut = remaining.rfind(" ", 0, limit)
+        if cut < limit // 2:
+            cut = limit
+        chunks.append(remaining[:cut].rstrip())
+        remaining = remaining[cut:].lstrip("\n ")
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
 def send_telegram_message(chat_id, text):
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip() or TELEGRAM_BOT_TOKEN
     if not token:
         print("[DAEMON ERROR] TELEGRAM_BOT_TOKEN is not set.", flush=True)
         return
+    # Telegram also rejects an empty body, which would otherwise surface as an
+    # opaque 400 identical to the too-long case.
+    if not (text or "").strip():
+        print(f"[DAEMON WARNING] Refusing to send an empty message to chat {chat_id}.", flush=True)
+        return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = json.dumps({"chat_id": chat_id, "text": text}).encode('utf-8')
-    req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            pass
-    except Exception as e:
-        print(f"[DAEMON ERROR] Failed to send message to Telegram chat {chat_id}: {e}", flush=True)
+    for part in split_for_telegram(text):
+        payload = json.dumps({"chat_id": chat_id, "text": part}).encode('utf-8')
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                pass
+        except urllib.error.HTTPError as e:
+            # Telegram explains the rejection in the response body; without it
+            # every failure reads as a bare "HTTP Error 400: Bad Request".
+            try:
+                detail = e.read().decode("utf-8", "replace")[:300]
+            except Exception:
+                detail = "<no body>"
+            print(f"[DAEMON ERROR] Failed to send message to Telegram chat {chat_id}: {e} {detail}", flush=True)
+            return
+        except Exception as e:
+            print(f"[DAEMON ERROR] Failed to send message to Telegram chat {chat_id}: {e}", flush=True)
+            return
 
 import datetime
 
