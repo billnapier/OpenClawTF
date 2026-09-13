@@ -189,26 +189,44 @@ This is a manual, one-time step — the OAuth consent flow requires a real brows
    ```bash
    openssl rand -base64 32 | gcloud secrets create gog-keyring-password --data-file=-
    ```
-2. Copy `client_secret.json` to the host (`gcloud compute scp client_secret.json openclaw-vm:/tmp/ --zone <zone> --tunnel-through-iap`), then SSH in and run the grant. The host is headless, so use `gog`'s two-step remote flow rather than the default browser flow — step 1 prints a URL you can open on any device, step 2 exchanges the code it redirects to:
+2. Stage `client_secret.json` on the host, then into the container:
+   ```bash
+   gcloud compute scp client_secret.json openclaw-vm:/tmp/ --zone <zone> --tunnel-through-iap
+   gcloud compute ssh openclaw-vm --zone <zone> --tunnel-through-iap
+   sudo docker cp /tmp/client_secret.json openclaw-container:/tmp/client_secret.json
+   ```
+
+   > **`docker exec` does not inherit the environment `entrypoint.sh` exports.** The daemon has `GOG_HOME` etc. because entrypoint spawned it; a fresh `exec` session gets none of it. Set them explicitly or `gog` will write the token to the container's *ephemeral* filesystem, where it looks fine until the next deploy silently discards it. The passphrase is fetched inside the container because `gcloud` isn't installed on the COS host.
+
+   The host is headless, so use `gog`'s two-step remote flow — step 1 prints a URL you can approve on any device (a phone is fine), step 2 exchanges the code:
 
    ```bash
-   # inside the container, where gog and GOG_HOME live
-   sudo docker exec -it openclaw-container bash
-
-   gog auth credentials set /tmp/client_secret.json
-
    # step 1 - prints a consent URL
-   gog auth add you@example.com \
-     --services gmail,calendar,drive,tasks,contacts \
-     --remote --step 1
+   sudo docker exec openclaw-container sh -c '
+     export GOG_KEYRING_BACKEND=file
+     export GOG_HOME=/mnt/disks/openclaw-data/gogcli
+     export GOG_KEYRING_PASSWORD=$(gcloud secrets versions access latest --secret=gog-keyring-password)
+     gog auth credentials set /tmp/client_secret.json
+     gog auth add you@example.com --services gmail,calendar,drive,tasks,contacts --remote --step 1
+   '
 
-   # approve in any browser, copy the full localhost URL it redirects to
-   # (it will fail to load - that is expected; the code is in the URL)
+   # approve the printed URL in any browser. It redirects to a 127.0.0.1 address
+   # that will fail to load - expected; the code is in that URL. Copy it whole,
+   # including the state parameter.
 
    # step 2 - exchange it
-   gog auth add you@example.com \
-     --services gmail,calendar,drive,tasks,contacts \
-     --remote --step 2 --auth-url "<the full redirect URL>"
+   sudo docker exec openclaw-container sh -c '
+     export GOG_KEYRING_BACKEND=file
+     export GOG_HOME=/mnt/disks/openclaw-data/gogcli
+     export GOG_KEYRING_PASSWORD=$(gcloud secrets versions access latest --secret=gog-keyring-password)
+     gog auth add you@example.com --services gmail,calendar,drive,tasks,contacts \
+       --remote --step 2 --auth-url "<the full redirect URL>"
+   '
+
+   # clean up - the file is only an input to `credentials set`; gog copies what
+   # it needs into its own store under GOG_HOME
+   sudo docker exec openclaw-container shred -u /tmp/client_secret.json
+   shred -u /tmp/client_secret.json
    ```
 
    Scope can be narrowed if you'd rather not grant full access — `--gmail-scope=read-send`, `--drive-scope=readonly`, or `--readonly` for read-only across the board.
