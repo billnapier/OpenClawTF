@@ -158,6 +158,54 @@ print("OK")
 EOF
 echo "[TEST PASS] Simulated gog exit code 4 maps to status: auth_required with a clear message, never raw stderr."
 
+python3 - <<'EOF'
+from unittest.mock import patch
+import json
+from tool_gateway import ToolGateway, GOG_EXIT_STATUS
+
+# The full taxonomy from `gog schema --json` (automation.exit_codes). An
+# earlier mapping derived from the docs site omitted 1/3/10/11/130, so all of
+# them collapsed into a generic "error" - including empty_results.
+for code in (0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 130):
+    assert code in GOG_EXIT_STATUS, f"exit code {code} missing from the taxonomy"
+
+def runner(code, stdout=""):
+    def fake_run(cmd, capture_output, text, timeout, env):
+        class R:
+            returncode = code
+            stderr = ""
+        R.stdout = stdout
+        return R()
+    return fake_run
+
+gw = ToolGateway()
+
+# empty_results is a successful call that simply matched nothing. Reporting it
+# as an error turns "no email today" into a failure message.
+with patch("tool_gateway.subprocess.run", side_effect=runner(3, "")):
+    res = gw.call_mcp_tool("list_messages", json.dumps({"query": "is:unread"}))
+assert res["status"] == "success", res
+assert res["exit_code"] == 3, res
+assert "output" in res, "empty_results must still carry an output key"
+assert res["output"] == {}, res
+print("OK empty_results (3) -> success with empty output")
+
+# ...and when gog does emit a JSON envelope alongside code 3, keep it.
+with patch("tool_gateway.subprocess.run", side_effect=runner(3, '{"threads": []}')):
+    res = gw.call_mcp_tool("list_messages", json.dumps({"query": "is:unread"}))
+assert res["status"] == "success" and res["output"] == {"threads": []}, res
+print("OK empty_results (3) -> parsed JSON preserved")
+
+for code, expected in ((1, "error"), (10, "error"), (11, "error"), (130, "error")):
+    with patch("tool_gateway.subprocess.run", side_effect=runner(code, "")):
+        res = gw.call_mcp_tool("list_messages", json.dumps({"query": "x"}))
+    assert res["status"] == expected, (code, res)
+    assert res.get("error"), f"exit {code} should carry a human-readable message"
+    assert res["exit_code"] == code, res
+print("OK codes 1/10/11/130 -> error with a clear message")
+EOF
+echo "[TEST PASS] Full gog exit-code taxonomy handled; empty_results (3) is a success, not a failure."
+
 # =============================================================================
 # User Story 3 (P3): Google Tasks Management
 # =============================================================================
