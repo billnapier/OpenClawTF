@@ -189,13 +189,29 @@ This is a manual, one-time step — the OAuth consent flow requires a real brows
    ```bash
    openssl rand -base64 32 | gcloud secrets create gog-keyring-password --data-file=-
    ```
-2. On a machine with a browser, load your GCP OAuth client and grant access:
+2. Copy `client_secret.json` to the host (`gcloud compute scp client_secret.json openclaw-vm:/tmp/ --zone <zone> --tunnel-through-iap`), then SSH in and run the grant. The host is headless, so use `gog`'s two-step remote flow rather than the default browser flow — step 1 prints a URL you can open on any device, step 2 exchanges the code it redirects to:
+
    ```bash
-   GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<passphrase> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
-     gog auth credentials /path/to/client_secret.json
-   GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<passphrase> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
-     gog auth add you@example.com --services gmail,calendar,drive,tasks,contacts
+   # inside the container, where gog and GOG_HOME live
+   sudo docker exec -it openclaw-container bash
+
+   gog auth credentials set /tmp/client_secret.json
+
+   # step 1 - prints a consent URL
+   gog auth add you@example.com \
+     --services gmail,calendar,drive,tasks,contacts \
+     --remote --step 1
+
+   # approve in any browser, copy the full localhost URL it redirects to
+   # (it will fail to load - that is expected; the code is in the URL)
+
+   # step 2 - exchange it
+   gog auth add you@example.com \
+     --services gmail,calendar,drive,tasks,contacts \
+     --remote --step 2 --auth-url "<the full redirect URL>"
    ```
+
+   Scope can be narrowed if you'd rather not grant full access — `--gmail-scope=read-send`, `--drive-scope=readonly`, or `--readonly` for read-only across the board.
 3. Verify:
    ```bash
    GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=<passphrase> GOG_HOME=/mnt/disks/openclaw-data/gogcli \
